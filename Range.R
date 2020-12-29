@@ -46,7 +46,7 @@ if (!require('odbc', warn.conflicts = FALSE))
 con <- dbConnect(odbc(),
                  Driver = "{SQL Server Native Client 11.0}",
                  Server = "59.120.223.165",
-                 Database = "IDEIP",
+                 Database = "SensorAD",
                  UID = "idmm",
                  PWD = "wj/3ck6tj4",
                  Port = 1433)
@@ -57,16 +57,16 @@ con <- dbConnect(odbc(),
 ### 3倍標準差外的outlier ------------------------------
 sigma3outlier_range <- function(df,variable){   
   
-  min=description(df,variable)$min
-  max=description(df,variable)$max
-  Station=description(df,variable)$Station
+  min=0#description(df,variable)$min
+  max=999#description(df,variable)$max
+  #Station=description(df,variable)$Station
   
   
   df1=df %>%
-    mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
+    #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
     filter(between(.data[[variable]],min,max)) %>%
-    dplyr::summarise(lower_bound=mean(.data[[variable]])-3*sd(.data[[variable]]),upper_bound=mean(.data[[variable]])+3*sd(.data[[variable]])) %>% 
-    mutate("監測站站名"=Station,"變數"=variable)
+    dplyr::summarise(lower_bound=mean(.data[[variable]])-3*sd(.data[[variable]]),upper_bound=mean(.data[[variable]])+3*sd(.data[[variable]])) 
+    #mutate("監測站站名"=Station,"變數"=variable)
   df1
   
 }
@@ -77,16 +77,16 @@ sigma3outlier_range <- function(df,variable){
 ### 盒狀圖1.5倍IQR外的outlier -------------------------
 IQRoutlier_range <- function(df,variable){
   
-  min=description(df,variable)$min
-  max=description(df,variable)$max
-  Station=description(df,variable)$Station
+  min=0#description(df,variable)$min
+  max=999#description(df,variable)$max
+  #Station=description(df,variable)$Station
   
   df1 =  df %>%
-    mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
+    #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
     filter(between(.data[[variable]],min,max) ) %>%
     dplyr::summarise(lower_bound=quantile(.data[[variable]],probs = 0.25)-1.5*IQR(.data[[variable]]),
-                     upper_bound=quantile(.data[[variable]],probs = 0.75)+1.5*IQR(.data[[variable]])) %>% 
-    mutate("監測站站名"=Station,"變數"=variable)
+                     upper_bound=quantile(.data[[variable]],probs = 0.75)+1.5*IQR(.data[[variable]])) #%>% 
+    #mutate("監測站站名"=Station,"變數"=variable)
   
   df1
   
@@ -101,23 +101,21 @@ IQRoutlier_range <- function(df,variable){
 #p2:預期會有多少比例的outlier，通常比p1小，outlier比例不超過p2
 chebyshev_range <-function(df,var,p1,p2){
   
-  min=description(df,var)$min
-  max=description(df,var)$max
-  Station=description(df,var)$Station
+  min=0 #description(df,var)$min
+  max=999 #description(df,var)$max
+  #Station=description(df,var)$Station
   
   k1=1/sqrt(p1)
   ODV_1LU=df %>% 
     filter(between(.data[[var]],min,max)) %>%
     dplyr::summarise(Mean_all=mean(.data[[var]]),SD_all=sd(.data[[var]])) %>%
-    mutate("監測站站名"=Station,"變數"=var,
-           ODV_1L=Mean_all-k1*SD_all,ODV_1U=Mean_all+k1*SD_all)
+    mutate(ODV_1L=Mean_all-k1*SD_all,ODV_1U=Mean_all+k1*SD_all)
   
   k2=1/sqrt(p2)
   ODV_LU=df %>% 
     filter(between(.data[[var]],ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
     dplyr::summarise(Mean_trun=mean(.data[[var]]),SD_trun=sd(.data[[var]])) %>%
-    mutate("監測站站名"=Station,"變數"=var,
-           ODV_L=Mean_trun-k2*SD_trun,ODV_U=Mean_trun+k2*SD_trun)
+    mutate(ODV_L=Mean_trun-k2*SD_trun,ODV_U=Mean_trun+k2*SD_trun)
   
   ODV_LU
 }
@@ -131,14 +129,43 @@ chebyshev_range <-function(df,var,p1,p2){
 #3.計算結果
 #4.儲存結果
 
+bochConnect <- dbConnect(odbc(),
+                         Driver = "{SQL Server Native Client 11.0}",
+                         Server = "192.168.51.72",
+                         Database = "BochObservation",
+                         UID = "ricky",
+                         PWD = "ricky",
+                         Port = 1433)
+
+#server=192.168.51.72;database=BochObservation;uid=ricky;pwd=ricky
+
+#dbReadTable(con, "Person")
+
+query <- dbSendQuery(bochConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
+data <- dbFetch(query)
+#dbClearResult(query)
+#print(data)
 
 
 
 
+sigma3Result <-  sigma3outlier_range(data,"Temp")
+IQRResult <-  IQRoutlier_range(data,"Temp")
+chebyshevResult <- chebyshev_range(data,"Temp",0.2,0.05)
+  #sigma3outlier_range(query,"UV")
+print(sigma3Result$lower_bound)
+print(IQRResult)
+print(chebyshevResult)
 
 
-
-
+#資料更新回資料庫
+sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
+sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,chebyshevResult$ODV_U,", [CHE_DOWN] = ",chebyshevResult$ODV_L,", ")
+sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,IQRResult$upper_bound,", [BOX_DOWN] = ",IQRResult$lower_bound,", ")
+sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,sigma3Result$upper_bound,", [NORMAL_DOWN] = ",sigma3Result$lower_bound)
+sqlr_Update <- paste(sqlr_Update, " where SN = 1")
+print(sqlr_Update)
+dbGetQuery(con, sqlr_Update)
 
 
 
