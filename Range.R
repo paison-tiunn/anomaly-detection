@@ -42,17 +42,6 @@ if (!require('odbc', warn.conflicts = FALSE))
 }
 
 
-#資料庫連線
-con <- dbConnect(odbc(),
-                 Driver = "{SQL Server Native Client 11.0}",
-                 Server = "59.120.223.165",
-                 Database = "SensorAD",
-                 UID = "idmm",
-                 PWD = "wj/3ck6tj4",
-                 Port = 1433)
-
-
-
 
 ### 3倍標準差外的outlier ------------------------------
 sigma3outlier_range <- function(df,variable){   
@@ -122,6 +111,46 @@ chebyshev_range <-function(df,var,p1,p2){
 
 
 
+setDBConnect <- function(ip,db,user,pwd){
+  conn <- dbConnect(odbc(),
+                    Driver = "{SQL Server Native Client 11.0}",
+                    Server = ip,
+                    Database = db,
+                    UID = user,
+                    PWD = pwd,
+                    Port = 1433)
+  conn
+}
+
+
+getSensorSQL <- function(tbName,time_Col,sid_Col,sensorID,period){
+  
+  sqlStr <- "SELECT * FROM "
+  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," = getdate()-", period, sep="" )
+  
+  sqlStr
+}
+
+
+calResult <- function(data,col,sn){
+  
+  sigma3Result <-  sigma3outlier_range(data,col)
+  IQRResult <-  IQRoutlier_range(data,col)
+  chebyshevResult <- chebyshev_range(data,col,0.2,0.05)
+  
+  
+  #資料更新回資料庫
+  sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
+  sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,chebyshevResult$ODV_U,", [CHE_DOWN] = ",chebyshevResult$ODV_L,", ")
+  sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,IQRResult$upper_bound,", [BOX_DOWN] = ",IQRResult$lower_bound,", ")
+  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,sigma3Result$upper_bound,", [NORMAL_DOWN] = ",sigma3Result$lower_bound,", ")
+  sqlr_Update <- paste(sqlr_Update, "[UPDATE_TIME] = getdate() ")
+  sqlr_Update <- paste(sqlr_Update, " where SN = 1")
+  print(sqlr_Update)
+  dbGetQuery(basicConn, sqlr_Update)
+}
+
+
 
 #步驟
 #1.先取出資料集
@@ -129,7 +158,41 @@ chebyshev_range <-function(df,var,p1,p2){
 #3.計算結果
 #4.儲存結果
 
-bochConnect <- dbConnect(odbc(),
+#資料庫連線
+basicConn <- dbConnect(odbc(),
+                 Driver = "{SQL Server Native Client 11.0}",
+                 Server = "59.120.223.165",
+                 Database = "SensorAD",
+                 UID = "idmm",
+                 PWD = "wj/3ck6tj4",
+                 Port = 1433)
+
+#取得需要做計算的儀器
+querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where update_time > getdate()-update_FQ")
+# select * from V_Sensor_Info where update_time > getdate()-update_FQ
+SensorInfoList <- dbFetch(querySensor)
+
+#print(nrow(SensorInfoList))
+#print(length(SensorInfoList))
+
+for (idx in 1:nrow(SensorInfoList)) {
+  #print(SensorInfoList[2])
+  SensorConnect <- setDBConnect(SensorInfoList$IP,SensorInfoList$DB_NAME,SensorInfoList$USERNAME,SensorInfoList$PASSWORD)
+  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME ,SensorInfoList$TIME_COL,"username",SensorInfoList$SENSOR_ID,SensorInfoList$UPDATE_FQ)
+  query <- dbSendQuery(SensorConnect, queryStr)
+  data <- dbFetch(query)
+  calResult(data,SensorInfoList$COLUMN_NAME,SensorInfoList$SN)
+  #print(queryStr)
+}
+
+
+
+
+
+
+
+#--------------------------------------------------------------------------------------------------
+SensorConnect <- dbConnect(odbc(),
                          Driver = "{SQL Server Native Client 11.0}",
                          Server = "192.168.51.72",
                          Database = "BochObservation",
@@ -141,7 +204,7 @@ bochConnect <- dbConnect(odbc(),
 
 #dbReadTable(con, "Person")
 
-query <- dbSendQuery(bochConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
+query <- dbSendQuery(SensorConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
 data <- dbFetch(query)
 #dbClearResult(query)
 #print(data)
@@ -149,23 +212,13 @@ data <- dbFetch(query)
 
 
 
-sigma3Result <-  sigma3outlier_range(data,"Temp")
-IQRResult <-  IQRoutlier_range(data,"Temp")
-chebyshevResult <- chebyshev_range(data,"Temp",0.2,0.05)
+
   #sigma3outlier_range(query,"UV")
 print(sigma3Result$lower_bound)
 print(IQRResult)
 print(chebyshevResult)
 
 
-#資料更新回資料庫
-sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
-sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,chebyshevResult$ODV_U,", [CHE_DOWN] = ",chebyshevResult$ODV_L,", ")
-sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,IQRResult$upper_bound,", [BOX_DOWN] = ",IQRResult$lower_bound,", ")
-sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,sigma3Result$upper_bound,", [NORMAL_DOWN] = ",sigma3Result$lower_bound)
-sqlr_Update <- paste(sqlr_Update, " where SN = 1")
-print(sqlr_Update)
-dbGetQuery(con, sqlr_Update)
 
 
 
