@@ -110,7 +110,105 @@ chebyshev_range <-function(df,var,p1,p2){
 }
 
 
+#1.前後跳動過大
+###na補每月中位數 ----------
+na_median <- function(data,var){
+  
+  min=0#description(data,var)$min
+  max=999#description(data,var)$max
+  #Station=description(data,var)$Station
+  
+  
+  da= data %>%
+    select(LocalTime,.data[[var]]) %>% 
+    #mutate("監測站站名"=Station,"氣象變數"=var,"year"=year(LocalTime),"month"=month(LocalTime),
+    #       "是否遺漏"=ifelse(is.na(data[[var]]),1,0)) 
+  
+  m= da %>%
+    group_by(year=year(LocalTime),month=month(LocalTime)) %>%
+    dplyr::summarise("遺漏總和"=sum(是否遺漏)) 
+  
+  
+  #每個月的中位數，整月若為NA，則不會顯現
+  Median=  da %>%
+    filter(between(.data[[var]],min,max)) %>%
+    group_by(year=year(LocalTime),month=month(LocalTime)) %>%
+    dplyr::summarise("median"=median(.data[[var]],na.rm = TRUE))
+  
+  
+  
+  
+  m1=left_join(m,Median,by=c("year","month")) %>% 
+    select(year,month,median)
+  
+  
+  #上面月份為na的使用相同月分的最後一筆資料補起來，這樣每個月都有值
+  #相同月分的最後一筆資料，可用slice() n():最後一筆
+  last= Median %>%
+    filter(median!="NA") %>%
+    group_by(month) %>%
+    slice(n()) %>%
+    select(month,median) %>%
+    reshape::rename(c(median="median.month"))
+  
+  
+  #將NA補中位數
+  lm1=left_join(m1,last,by=c("month"))%>%
+    mutate(median = ifelse(is.na(median),median.month,median)) %>%
+    select(year,month,median)
+  
+  
+  #原始資料na補中位數
+  h=data[[var]]
+  
+  DATA= left_join(da,lm1,by=c("year","month")) %>%
+    mutate( var = ifelse(is.na(h),median,h),"中位數補值"=ifelse(is.na(h),1,0),
+            "前一筆補中位數"=lag(中位數補值,default=中位數補值[1])) %>%
+    select(監測站站名,氣象變數,LocalTime,var,中位數補值,前一筆補中位數) %>%
+    reshape::rename(c(var=var))
+  
+  DATA
+}
 
+
+###補值完算前後差異，使用chebyshev找出跳動最大值 -----------
+#前後差可容忍跳動最大值
+# p1目前取0.1還不錯，p2取0.005
+chebyshev_jumprange_na <-function(df,var,p1=0.1,p2){
+  
+  
+  min=description(df,var)$min
+  max=description(df,var)$max
+  Station=description(df,var)$Station
+  
+  
+  data0=na_median(df,var)
+  
+  
+  data=data0 %>%
+    mutate("前時間"=lag(LocalTime,default=LocalTime[1]),
+           "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
+           "前後差" = abs(前面一個 - data0[[var]]),
+           "監測站站名"=Station) %>%
+    filter(between(data0[[var]],min,max) )
+  
+  k1=1/sqrt(p1) 
+  ODV_1LU=data  %>%
+    dplyr::summarise(前後差平均_all=mean(前後差),前後差標準差_all=sd(前後差)) %>%
+    mutate(ODV_1L=前後差平均_all-k1*前後差標準差_all,ODV_1U=前後差平均_all+k1*前後差標準差_all)
+  
+  k2=1/sqrt(p2)
+  ODV_LU=data %>%
+    filter(between(前後差,ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
+    dplyr::summarise(前後差平均_trun=mean(前後差),前後差標準差_trun=sd(前後差),"監測站站名"=Station) %>%
+    mutate(ODV_L=前後差平均_trun-k2*前後差標準差_trun,ODV_U=前後差平均_trun+k2*前後差標準差_trun)
+  
+  
+  ODV_LU
+}
+
+
+#設定資料庫連線
 setDBConnect <- function(ip,db,user,pwd){
   conn <- dbConnect(odbc(),
                     Driver = "{SQL Server Native Client 11.0}",
@@ -123,15 +221,17 @@ setDBConnect <- function(ip,db,user,pwd){
 }
 
 
+#組合查詢字串
 getSensorSQL <- function(tbName,time_Col,sid_Col,sensorID,period){
   
   sqlStr <- "SELECT * FROM "
-  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," = getdate()-", period, sep="" )
+  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," > getdate()-", period, sep="" )
   
   sqlStr
 }
 
 
+#計算結果
 calResult <- function(data,col,sn){
   
   sigma3Result <-  sigma3outlier_range(data,col)
@@ -145,7 +245,7 @@ calResult <- function(data,col,sn){
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,IQRResult$upper_bound,", [BOX_DOWN] = ",IQRResult$lower_bound,", ")
   sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,sigma3Result$upper_bound,", [NORMAL_DOWN] = ",sigma3Result$lower_bound,", ")
   sqlr_Update <- paste(sqlr_Update, "[UPDATE_TIME] = getdate() ")
-  sqlr_Update <- paste(sqlr_Update, " where SN = 1")
+  sqlr_Update <- paste(sqlr_Update, " where SN = ", sn)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
 }
@@ -177,12 +277,14 @@ SensorInfoList <- dbFetch(querySensor)
 
 for (idx in 1:nrow(SensorInfoList)) {
   #print(SensorInfoList[2])
-  SensorConnect <- setDBConnect(SensorInfoList$IP,SensorInfoList$DB_NAME,SensorInfoList$USERNAME,SensorInfoList$PASSWORD)
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME ,SensorInfoList$TIME_COL,"username",SensorInfoList$SENSOR_ID,SensorInfoList$UPDATE_FQ)
+  
+  SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
+  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$UPDATE_FQ[idx])
+  print(queryStr)
   query <- dbSendQuery(SensorConnect, queryStr)
   data <- dbFetch(query)
-  calResult(data,SensorInfoList$COLUMN_NAME,SensorInfoList$SN)
-  #print(queryStr)
+  calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
+  print(queryStr)
 }
 
 
@@ -191,32 +293,32 @@ for (idx in 1:nrow(SensorInfoList)) {
 
 
 
-#--------------------------------------------------------------------------------------------------
-SensorConnect <- dbConnect(odbc(),
-                         Driver = "{SQL Server Native Client 11.0}",
-                         Server = "192.168.51.72",
-                         Database = "BochObservation",
-                         UID = "ricky",
-                         PWD = "ricky",
-                         Port = 1433)
-
-#server=192.168.51.72;database=BochObservation;uid=ricky;pwd=ricky
-
-#dbReadTable(con, "Person")
-
-query <- dbSendQuery(SensorConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
-data <- dbFetch(query)
-#dbClearResult(query)
-#print(data)
-
-
+##--------------------------------------------------------------------------------------------------
+#SensorConnect <- dbConnect(odbc(),
+#                         Driver = "{SQL Server Native Client 11.0}",
+#                         Server = "192.168.51.72",
+#                         Database = "BochObservation",
+#                         UID = "ricky",
+#                         PWD = "ricky",
+#                         Port = 1433)
+#
+##server=192.168.51.72;database=BochObservation;uid=ricky;pwd=ricky
+#
+##dbReadTable(con, "Person")
+#
+#query <- dbSendQuery(SensorConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
+#data <- dbFetch(query)
+##dbClearResult(query)
+##print(data)
 
 
 
-  #sigma3outlier_range(query,"UV")
-print(sigma3Result$lower_bound)
-print(IQRResult)
-print(chebyshevResult)
+
+
+#  #sigma3outlier_range(query,"UV")
+#print(sigma3Result$lower_bound)
+#print(IQRResult)
+#print(chebyshevResult)
 
 
 
