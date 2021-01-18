@@ -47,7 +47,7 @@ if (!require('odbc', warn.conflicts = FALSE))
 sigma3outlier_range <- function(df,variable){   
   
   min=0#description(df,variable)$min
-  max=999#description(df,variable)$max
+  max=9999#description(df,variable)$max
   #Station=description(df,variable)$Station
   
   
@@ -67,7 +67,7 @@ sigma3outlier_range <- function(df,variable){
 IQRoutlier_range <- function(df,variable){
   
   min=0#description(df,variable)$min
-  max=999#description(df,variable)$max
+  max=9999#description(df,variable)$max
   #Station=description(df,variable)$Station
   
   df1 =  df %>%
@@ -91,7 +91,7 @@ IQRoutlier_range <- function(df,variable){
 chebyshev_range <-function(df,var,p1,p2){
   
   min=0 #description(df,var)$min
-  max=999 #description(df,var)$max
+  max=9999 #description(df,var)$max
   #Station=description(df,var)$Station
   
   k1=1/sqrt(p1)
@@ -115,7 +115,7 @@ chebyshev_range <-function(df,var,p1,p2){
 na_median <- function(data,var){
   
   min=0#description(data,var)$min
-  max=999#description(data,var)$max
+  max=9999#description(data,var)$max
   #Station=description(data,var)$Station
   
   
@@ -268,10 +268,10 @@ basicConn <- dbConnect(odbc(),
                  Port = 1433)
 
 #取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where update_time > getdate()-update_FQ")
+querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where update_time > getdate()-update_FQ ")
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 SensorInfoList <- dbFetch(querySensor)
-
+dbClearResult(querySensor)
 #print(nrow(SensorInfoList))
 #print(length(SensorInfoList))
 
@@ -280,16 +280,20 @@ for (idx in 1:nrow(SensorInfoList)) {
   
   SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
   queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$UPDATE_FQ[idx])
-  print(queryStr)
+  #print(queryStr)
   query <- dbSendQuery(SensorConnect, queryStr)
   data <- dbFetch(query)
+  #print(nrow(data))
+  dbClearResult(query)
   calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
-  print(queryStr)
+  #print(queryStr)
+  
 }
 
 
 
-
+dbDisconnect(basicConn)
+dbDisconnect(SensorConnect)
 
 
 
@@ -319,17 +323,5 @@ for (idx in 1:nrow(SensorInfoList)) {
 #print(sigma3Result$lower_bound)
 #print(IQRResult)
 #print(chebyshevResult)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
