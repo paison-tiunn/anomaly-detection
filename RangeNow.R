@@ -86,7 +86,7 @@ if (!require('kableExtra', warn.conflicts = FALSE))
   install.packages('kableExtra',repos='https://cran.rstudio.com');
   library(kableExtra, warn.conflicts = FALSE);#產製表格:data %>% kable() %>% kable_styling()
 }
-  
+
 
 #安裝、載入RODBC套件
 if (!require('odbc', warn.conflicts = FALSE)) 
@@ -120,7 +120,7 @@ sigma3outlier_range <- function(df,sinfo){
     #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
     filter(between(.data[[sinfo$VALUE_COL]],min,max)) %>%
     dplyr::summarise(lower_bound=mean(.data[[sinfo$VALUE_COL]])-3*sd(.data[[sinfo$VALUE_COL]]),upper_bound=mean(.data[[sinfo$VALUE_COL]])+3*sd(.data[[sinfo$VALUE_COL]])) 
-    #mutate("監測站站名"=Station,"變數"=variable)
+  #mutate("監測站站名"=Station,"變數"=variable)
   df1
   
 }
@@ -147,7 +147,7 @@ IQRoutlier_range <- function(df,sinfo){
     filter(between(.data[[sinfo$VALUE_COL]],min,max) ) %>%
     dplyr::summarise(lower_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.25)-1.5*IQR(.data[[sinfo$VALUE_COL]]),
                      upper_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.75)+1.5*IQR(.data[[sinfo$VALUE_COL]])) #%>% 
-    #mutate("監測站站名"=Station,"變數"=variable)
+  #mutate("監測站站名"=Station,"變數"=variable)
   
   df1
   
@@ -212,7 +212,7 @@ na_median <- function(data,var,sinfo){
   if (!is.na(sinfo$SENSOR_UP)) {
     max = sinfo$SENSOR_UP
   }
-
+  
   #print("na_median da")
   #print(var)
   #print(year(data[[sinfo$TIME_COL]]))
@@ -224,7 +224,7 @@ na_median <- function(data,var,sinfo){
     mutate("ltime" = data[[sinfo$TIME_COL]],"氣象變數"=var,"year"=year(data[[sinfo$TIME_COL]]),"month"=month(data[[sinfo$TIME_COL]]),
            "是否遺漏"=ifelse(is.na(data[[var]]),1,0)) 
   #print(da)
-
+  
   m= da %>%
     group_by(year=year(ltime),month=month(ltime)) %>%
     dplyr::summarise("遺漏總和"=sum(是否遺漏)) 
@@ -299,9 +299,9 @@ chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
     mutate("前時間"=lag(ltime,default=ltime[1]),
            "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
            "前後差" = abs(前面一個 - data0[[var]])
-           ) %>%
+    ) %>%
     filter(between(data0[[var]],min,max) )
-
+  
   
   k1=1/sqrt(p1) 
   ODV_1LU=data  %>%
@@ -367,7 +367,6 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
 }
 
 #temp_outlier = chebyshev_jumpdata_na(data.list.WL[[1]],"Temp",0.1,0.005)
-
 
 #寫log
 writeLog<-function(msg){
@@ -435,7 +434,7 @@ calResult <- function(data,sensorInfo){
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
   
-
+  
   temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
   #print(temp_outlier$可容忍跳動最大值[1])
   
@@ -475,8 +474,8 @@ calResult <- function(data,sensorInfo){
   if(is.numeric(JUMP_VALUE)){
     JUMP_VALUE <- round(JUMP_VALUE , 3)
   }
-  
-  
+    
+    
   #資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
@@ -497,18 +496,18 @@ calResult <- function(data,sensorInfo){
 #3.計算結果
 #4.儲存結果
 
-writeLog("Start Range Process")
+writeLog("Start RangeNow Process")
 #資料庫連線
 basicConn <- dbConnect(odbc(),
-                 Driver = "{SQL Server Native Client 11.0}",
-                 Server = "59.120.223.165",
-                 Database = "SensorWebAD",
-                 UID = "idmm",
-                 PWD = "wj/3ck6tj4",
-                 Port = 1433)
+                       Driver = "{SQL Server Native Client 11.0}",
+                       Server = "59.120.223.165",
+                       Database = "SensorWebAD",
+                       UID = "idmm",
+                       PWD = "wj/3ck6tj4",
+                       Port = 1433)
 
 #取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-update_FQ ")
+querySensor <- dbSendQuery(basicConn,"select top 1 * from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-0.01 order by update_time desc ")
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
@@ -532,11 +531,10 @@ for (idx in 1:nrow(SensorInfoList)) {
   #print(aa$TABLE_NAME)
   calResult(data,SensorInfoList[idx,])
   #print(queryStr)
-  writeLog(queryStr)
   
 }
 
-writeLog("Finish Range Process")
+writeLog("Finish RangeNow Process")
 
 
 dbDisconnect(basicConn)

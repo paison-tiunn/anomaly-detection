@@ -1,0 +1,1 @@
+R -e "source('C:\\Project\\Range.R',encoding='UTF-8')" 
