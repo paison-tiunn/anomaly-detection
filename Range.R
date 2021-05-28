@@ -483,7 +483,7 @@ calResult <- function(data,sensorInfo){
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,NORMAL_UP,", [NORMAL_DOWN] = ",NORMAL_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
-  sqlr_Update <- paste(sqlr_Update, "[UPDATE_TIME] = getdate() ")
+  sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
@@ -508,7 +508,7 @@ basicConn <- dbConnect(odbc(),
                  Port = 1433)
 
 #取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-update_FQ ")
+querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where AUTO_UPDATE=1 and CALCUlATE_TIME < getdate()-update_FQ ")
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
