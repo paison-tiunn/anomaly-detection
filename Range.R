@@ -418,9 +418,9 @@ setDBConnect <- function(ip,db,user,pwd){
 
 
 #組合查詢字串
-getSensorSQL <- function(tbName,time_Col,sid_Col,sensorID,period){
-  
-  sqlStr <- "SELECT * FROM "
+getSensorSQL <- function(tbName,time_Col,value_col,sid_Col,sensorID,period){
+  sqlStr <- paste("SELECT ",sid_Col,",",value_col,",",time_Col," FROM ", sep="")
+  #sqlStr <- "SELECT * FROM "
   sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," > getdate()-", period, sep="" )
   
   sqlStr
@@ -476,6 +476,9 @@ calResult <- function(data,sensorInfo){
     JUMP_VALUE <- round(JUMP_VALUE , 3)
   }
   
+  if(is.na(JUMP_VALUE)){
+    JUMP_VALUE <- 0
+  }
   
   #資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
@@ -520,7 +523,7 @@ for (idx in 1:nrow(SensorInfoList)) {
   #print(SensorInfoList[2])
   
   SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$DATA_RANGE[idx])
+  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$VALUE_COL[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$DATA_RANGE[idx])
   #print(queryStr)
   query <- dbSendQuery(SensorConnect, queryStr)
   data <- dbFetch(query)
