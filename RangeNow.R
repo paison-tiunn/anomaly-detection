@@ -216,31 +216,34 @@ na_median <- function(data,var,sinfo){
   #print("na_median da")
   #print(var)
   #print(year(data[[sinfo$TIME_COL]]))
+  #需先將factor轉成character字串形式才能使用year()、month()等等
+  #data[[as.character(sinfo$TIME_COL)]]
+  #year(data[[as.character(sinfo$TIME_COL)]])
   
   da= data %>%
     select(.data[[var]]) %>%
     #mutate("ltime" = .data[[sinfo$TIME_COL]]) %>%
-    #dplyr::rename(sinfo$TIME_COL="ltime") #%>% 
-    mutate("ltime" = data[[sinfo$TIME_COL]],"氣象變數"=var,"year"=year(data[[sinfo$TIME_COL]]),"month"=month(data[[sinfo$TIME_COL]]),
-           "是否遺漏"=ifelse(is.na(data[[var]]),1,0)) 
+    #dplyr::rename(sinfo$TIME_COL="ltime") #%>%
+    mutate("ltime" = data[[as.character(sinfo$TIME_COL)]],"氣象變數"=var,"year"=year(data[[as.character(sinfo$TIME_COL)]]),"month"=month(data[[as.character(sinfo$TIME_COL)]]),
+           "是否遺漏"=ifelse(is.na(data[[var]]),1,0))
   #print(da)
   
   m= da %>%
     group_by(year=year(ltime),month=month(ltime)) %>%
-    dplyr::summarise("遺漏總和"=sum(是否遺漏)) 
+    dplyr::summarise("遺漏總和"=sum(是否遺漏))
   
   #print("after na_median da")
   #每個月的中位數，整月若為NA，則不會顯現
   Median=  da %>%
     filter(between(.data[[var]],min,max)) %>%
     group_by(year=year(ltime),month=month(ltime)) %>%
-    dplyr::summarise("median"=median(.data[[var]],na.rm = TRUE))
+    dplyr::summarise("median"=format(round(median(.data[[var]],na.rm = TRUE),3),nsmall=3))
   
   
   
-  
-  m1=left_join(m,Median,by=c("year","month")) %>% 
+  m1=left_join(m,Median,by=c("year","month")) %>%
     select(year,month,median)
+  
   
   
   #上面月份為na的使用相同月分的最後一筆資料補起來，這樣每個月都有值
@@ -269,6 +272,8 @@ na_median <- function(data,var,sinfo){
     reshape::rename(c(var=var))
   
   DATA
+  
+  
 }
 
 
@@ -289,11 +294,17 @@ chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
     max = sinfo$SENSOR_UP
   }
   
-  var = sinfo$VALUE_COL
+  ###var需變成字串
+  var = as.character(sinfo$VALUE_COL)
+  #var = as.character(sinfo$SENSOR_NAME)
+  
   #print("before na_median")
   data0=na_median(df,var,sinfo)
   #print("data0")
   #print(data0)
+  
+  #可能讀進來為字串，需轉數字型態
+  data0[[var]] <- as.numeric(data0[[var]])
   
   data=data0 %>%
     mutate("前時間"=lag(ltime,default=ltime[1]),
@@ -303,7 +314,8 @@ chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
     filter(between(data0[[var]],min,max) )
   
   
-  k1=1/sqrt(p1) 
+  
+  k1=1/sqrt(p1)
   ODV_1LU=data  %>%
     dplyr::summarise(前後差平均_all=mean(前後差),前後差標準差_all=sd(前後差)) %>%
     mutate(ODV_1L=前後差平均_all-k1*前後差標準差_all,ODV_1U=前後差平均_all+k1*前後差標準差_all)
@@ -331,20 +343,30 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
     max = sinfo$SENSOR_UP
   }
   
-  p21 = 0.1
-  p22 = 0.05
+  # p21 = 0.1  #代號p21統一成p1
+  # p22 = 0.05 #代號p22統一成p2
+  p1 = 0.1
+  p2 = 0.05
+  
+  
   if (!is.na(sinfo$JUMP_P1)) {
-    p1 = sinfo$JUMP_P1
+    p1 = sinfo$JUMP_P1    
   }
   
   if (!is.na(sinfo$JUMP_P2)) {
     p2 = sinfo$JUMP_P2
   }
   
-  ODV_LU=chebyshev_jumprange_na(df,sinfo,p21,p22)
+  #ODV_LU=chebyshev_jumprange_na(df,sinfo,p21,p22)  #修改統一代號p21->p1，p22->p2
+  ODV_LU=chebyshev_jumprange_na(df,sinfo,p1,p2)
+  
+  
   data0=na_median(df,var,sinfo)
   
   #print("da")
+  
+  #可能讀進來為字串，需轉數字型態
+  data0[[var]] <- as.numeric(data0[[var]])
   
   da=data0 %>%
     mutate("前時間"=lag(ltime,default=ltime[1]),
@@ -361,7 +383,7 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
   
   #& !between(da[[var]],LU$chebyshev下界,LU$chebyshev上界)排除落於chebyshev正常範圍內
   outlier=da2 %>%
-    filter( 前後差 > ODV_LU$ODV_U & 中位數補值!=1 & 前一筆補中位數!=1) 
+    filter( 前後差 > ODV_LU$ODV_U & 中位數補值!=1 & 前一筆補中位數!=1)
   outlier
   
 }
