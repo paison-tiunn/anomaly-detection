@@ -372,6 +372,7 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
 writeLog<-function(msg){
   #檢查路徑
   mainDir <- "C:/Project/log"
+  #mainDir <- "D:/0426Temp"
   today <- Sys.Date()
   
   year<-format(today, format="%Y")
@@ -417,10 +418,10 @@ setDBConnect <- function(ip,db,user,pwd){
 
 
 #組合查詢字串
-getSensorSQL <- function(tbName,time_Col,value_col,sid_Col,sensorID,period){
+getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate){
   sqlStr <- paste("SELECT ",sid_Col,",",value_col,",",time_Col," FROM ", sep="")
   #sqlStr <- "SELECT * FROM "
-  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," > getdate()-", period, sep="" )
+  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," between '",sdate,"' and '", edate,"'", sep="" )
   
   sqlStr
 }
@@ -513,11 +514,12 @@ basicConn <- dbConnect(odbc(),
                        Port = 1433)
 
 #取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select top 1 * from V_Sensor_Info where AUTO_UPDATE=1 and CALCUlATE_TIME > getdate()-0.01 order by update_time desc ")
+querySensor <- dbSendQuery(basicConn,"select top 1 SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,CHE_P1,CHE_P2,JUMP_P1,JUMP_P2 from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-0.01 order by update_time desc ")
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
+
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
-#print(nrow(SensorInfoList))
+print(nrow(SensorInfoList))
 #print(length(SensorInfoList))
 
 
@@ -525,8 +527,10 @@ for (idx in 1:nrow(SensorInfoList)) {
   #print(SensorInfoList[2])
 
   SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$VALUE_COL[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$DATA_RANGE[idx])
-  #print(queryStr)
+  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$VALUE_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SDATE[idx],SensorInfoList$EDATE[idx])
+  print(queryStr)
+  print(SensorInfoList$SENSOR_ID[idx])
+  print(SensorInfoList$SENSOR_ID_COL[idx])
   query <- dbSendQuery(SensorConnect, queryStr)
   data <- dbFetch(query)
   #print(nrow(data))
@@ -547,24 +551,6 @@ dbDisconnect(basicConn)
 dbDisconnect(SensorConnect)
 
 
-
-##--------------------------------------------------------------------------------------------------
-#SensorConnect <- dbConnect(odbc(),
-#                         Driver = "{SQL Server Native Client 11.0}",
-#                         Server = "192.168.51.72",
-#                         Database = "BochObservation",
-#                         UID = "ricky",
-#                         PWD = "ricky",
-#                         Port = 1433)
-#
-##server=192.168.51.72;database=BochObservation;uid=ricky;pwd=ricky
-#
-##dbReadTable(con, "Person")
-#
-#query <- dbSendQuery(SensorConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
-#data <- dbFetch(query)
-##dbClearResult(query)
-##print(data)
 
 
 
