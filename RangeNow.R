@@ -360,31 +360,32 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
   #ODV_LU=chebyshev_jumprange_na(df,sinfo,p21,p22)  #修改統一代號p21->p1，p22->p2
   ODV_LU=chebyshev_jumprange_na(df,sinfo,p1,p2)
   
+  ODV_LU
   
-  data0=na_median(df,var,sinfo)
+  #data0=na_median(df,var,sinfo)
   
-  #print("da")
+  ##print("da")
   
-  #可能讀進來為字串，需轉數字型態
-  data0[[var]] <- as.numeric(data0[[var]])
+  ##可能讀進來為字串，需轉數字型態
+  #data0[[var]] <- as.numeric(data0[[var]])
   
-  da=data0 %>%
-    mutate("前時間"=lag(ltime,default=ltime[1]),
-           "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
-           "前後差" = abs(前面一個 - data0[[var]]),
-           #"變動下限"=前面一個-ODV_LU$ODV_U,
-           #"變動上限"=前面一個+ODV_LU$ODV_U,
-           "可容忍跳動最大值"=ODV_LU$ODV_U,
-           #"chebyshev正常範圍下界"=LU$chebyshev下界,
-           #"chebyshev正常範圍上界"=LU$chebyshev上界,
-           "chebyshev跳動異常值"=1) %>%
-    filter(between(data0[[var]],min,max))
-  da2=reshape::rename(da,c(chebyshev跳動異常值=paste(var,"_chebyshev跳動異常值",sep="")))
+  #da=data0 %>%
+  #  mutate("前時間"=lag(ltime,default=ltime[1]),
+  #         "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
+  #         "前後差" = abs(前面一個 - data0[[var]]),
+  #         #"變動下限"=前面一個-ODV_LU$ODV_U,
+  #         #"變動上限"=前面一個+ODV_LU$ODV_U,
+  #         "可容忍跳動最大值"=ODV_LU$ODV_U,
+  #         #"chebyshev正常範圍下界"=LU$chebyshev下界,
+  #         #"chebyshev正常範圍上界"=LU$chebyshev上界,
+  #         "chebyshev跳動異常值"=1) %>%
+  #  filter(between(data0[[var]],min,max))
+  #da2=reshape::rename(da,c(chebyshev跳動異常值=paste(var,"_chebyshev跳動異常值",sep="")))
   
-  #& !between(da[[var]],LU$chebyshev下界,LU$chebyshev上界)排除落於chebyshev正常範圍內
-  outlier=da2 %>%
-    filter( 前後差 > ODV_LU$ODV_U & 中位數補值!=1 & 前一筆補中位數!=1)
-  outlier
+  ##& !between(da[[var]],LU$chebyshev下界,LU$chebyshev上界)排除落於chebyshev正常範圍內
+  #outlier=da2 %>%
+  #  filter( 前後差 > ODV_LU$ODV_U & 中位數補值!=1 & 前一筆補中位數!=1)
+  #outlier
   
 }
 
@@ -460,7 +461,7 @@ calResult <- function(data,sensorInfo){
   
   temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
   #print(temp_outlier$可容忍跳動最大值[1])
-  
+  #writeLog(temp_outlier$可容忍跳動最大值[1])
   
   CHE_UP <- chebyshevResult$ODV_U
   CHE_DOWN <- chebyshevResult$ODV_L
@@ -468,7 +469,8 @@ calResult <- function(data,sensorInfo){
   BOX_DOWN <- IQRResult$lower_bound
   NORMAL_UP <- sigma3Result$upper_bound
   NORMAL_DOWN <- sigma3Result$lower_bound
-  JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
+  #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
+  JUMP_VALUE <- temp_outlier$ODV_U
   
   if(is.numeric(CHE_UP)){
     CHE_UP <- round(CHE_UP , 3)
