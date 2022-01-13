@@ -1,8 +1,12 @@
 
 
 #統整合理範圍上下界
-#程式碼最後更新時間:   2020/12/22
-#版本:V1_Keny
+
+# 程式碼最後更新時間:
+#   2022/01/13 新增normal_outlier_range()取代sigma3outlier_range()
+#   2020/12/22
+
+#版本: V2_Paison, V1_Keny
 
 
 #自訂函數使用:
@@ -20,6 +24,7 @@
 #chebyshev_range():chebyshev正常範圍上下界 (p1、p2決定)
 #chebyshevoutlier_data():chebyshev正常範圍外outlier的資料時間點
 #chebyshevoutlier_count():依年月份算出在chebyshev正常範圍外outlier個數
+
 if (!require('plyr', warn.conflicts = FALSE)) 
 {
   install.packages('plyr',repos='https://cran.rstudio.com');
@@ -127,6 +132,24 @@ sigma3outlier_range <- function(df,sinfo){
   
 }
 
+
+#================================================================================================
+# normal_outlier_range(): self-defined function for outlier detection under normal distribution
+#==============================================================================================
+normal_outlier_range <- function(df, sinfo){
+  
+  #min = 0; max = 9999
+  if (!is.na(sinfo$SENSOR_DOWN)) {min = sinfo$SENSOR_DOWN}
+  if (!is.na(sinfo$SENSOR_UP)) {max = sinfo$SENSOR_UP}
+  df %<>% filter(between(.data[[sinfo$VALUE_COL]], min, max))
+  
+  #p = .001
+  if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
+  
+  df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
+                           upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
+  df
+}
 
 
 
@@ -456,7 +479,9 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 #calResult <- function(data,col,sn){
 calResult <- function(data,sensorInfo){  
   
-  sigma3Result <-  sigma3outlier_range(data,sensorInfo)
+  #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
+  normalResult <- normal_outlier_range(data, sensorInfo)
+  
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
   
@@ -469,8 +494,10 @@ calResult <- function(data,sensorInfo){
   CHE_DOWN <- chebyshevResult$ODV_L
   BOX_UP <- IQRResult$upper_bound
   BOX_DOWN <- IQRResult$lower_bound
-  NORMAL_UP <- sigma3Result$upper_bound
-  NORMAL_DOWN <- sigma3Result$lower_bound
+  
+  #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
+  NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
+  
   #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
   JUMP_VALUE <- temp_outlier$ODV_U
   
