@@ -585,7 +585,7 @@ basicConn <- dbConnect(odbc(),
                        Port = 1433)
 
 #取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select top 1 SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,CHE_P1,CHE_P2,JUMP_P1,JUMP_P2 from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-0.01 order by update_time desc ")
+querySensor <- dbSendQuery(basicConn,"select top 1 SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,CHE_P1,CHE_P2,JUMP_P1,JUMP_P2,NORMAL_P from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-0.01 order by update_time desc ")
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
 SensorInfoList <- dbFetch(querySensor)
@@ -597,8 +597,17 @@ print(nrow(SensorInfoList))
 for (idx in 1:nrow(SensorInfoList)) {
   #print(SensorInfoList[2])
 
-  SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$VALUE_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SDATE[idx],SensorInfoList$EDATE[idx])
+  SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
+                                SensorInfoList$DB_NAME[idx],
+                                SensorInfoList$USERNAME[idx],
+                                SensorInfoList$PASSWORD[idx])
+  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
+                           SensorInfoList$TIME_COL[idx],
+                           SensorInfoList$VALUE_COL[idx],
+                           SensorInfoList$SENSOR_ID[idx],
+                           SensorInfoList$SENSOR_ID_COL[idx],
+                           SensorInfoList$SDATE[idx],
+                           SensorInfoList$EDATE[idx])
   print(queryStr)
   print(SensorInfoList$SENSOR_ID[idx])
   print(SensorInfoList$SENSOR_ID_COL[idx])
@@ -610,7 +619,7 @@ for (idx in 1:nrow(SensorInfoList)) {
   #aa = SensorInfoList[idx,]
   #print("aa is ")
   #print(aa$TABLE_NAME)
-  calResult(data,SensorInfoList[idx,])
+  calResult(data, SensorInfoList[idx,])
   #print(queryStr)
   
 }
