@@ -458,6 +458,8 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 changeDetect = function(data, sensorInfo){
   DATA = data
   data = DATA[[sensorInfo$VALUE_COL]]
+  time = DATA[[sensorInfo$TIME_COL]]; CHANGE_TIME = time[1]
+  source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
     min = 1
@@ -507,10 +509,10 @@ changeDetect = function(data, sensorInfo){
         }
       }
     }
-    if(stop==0){data = data[cut+1:n]}
+    if(stop==0){data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]}
   }
-  
-  return()
+  DATA %<>% filter(sensorInfo$TIME_COL >= CHANGE_TIME)
+  return(list(DATA, CPD, CHANGE_TIME))
 }
 
 #計算結果
@@ -518,7 +520,9 @@ changeDetect = function(data, sensorInfo){
 calResult <- function(data, sensorInfo){  
   
   CPD_result = changeDetect(data, sensorInfo)
-  changeFound = CPD_result
+  data = CPD_result$DATA
+  changeFound = CPD_result$CPD
+  if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
   
   #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
   normalResult <- normal_outlier_range(data, sensorInfo)
@@ -577,13 +581,13 @@ calResult <- function(data, sensorInfo){
   
     
     
-  #資料更新回資料庫
+  # 資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,NORMAL_UP,", [NORMAL_DOWN] = ",NORMAL_DOWN,", ")
-  #sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
-  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE)
+  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
+  sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
   #sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)
