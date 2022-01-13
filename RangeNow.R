@@ -3,6 +3,7 @@
 #統整合理範圍上下界
 
 # 程式碼最後更新時間:
+#   2022/01/13 取消寫入[CALCUlATE_TIME] = getdate()
 #   2022/01/13 新增normal_outlier_range()取代sigma3outlier_range()
 #   2020/12/22
 
@@ -541,8 +542,9 @@ calResult <- function(data,sensorInfo){
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,NORMAL_UP,", [NORMAL_DOWN] = ",NORMAL_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
-  sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
+  #sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
+  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE)
+  #sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
