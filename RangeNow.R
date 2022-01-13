@@ -393,40 +393,42 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
 
 #temp_outlier = chebyshev_jumpdata_na(data.list.WL[[1]],"Temp",0.1,0.005)
 
-#寫log
-writeLog<-function(msg){
+get_mainDir = function(type){
+  
   #檢查路徑
   mainDir <- "C:/Project/log"
-  #mainDir <- "D:/0426Temp"
-  today <- Sys.Date()
+  today <- Sys.time()
+  year <- format(today, format = "%Y")
+  month <- format(today, format = "%m")
+  if(type=="txt"){day <- format(today, format = paste0("%F.", type))}
+  if(type=="Rout"){day <- format(today, format = paste0("%F_%H-%M-%S.", type))}
   
-  year<-format(today, format="%Y")
-  month<-format(today, format="%m")
-  day<-format(today, format="%Y-%m-%d.txt")
-  
-  paste(mainDir, year,"", sep = "/", collapse = "/")
-  
+  # year
   mainDir <- paste(mainDir, year, sep = "/", collapse = "/")
-  if(!file.exists(mainDir))
-  {
+  if(!file.exists(mainDir)){
     dir.create(file.path(mainDir), showWarnings = FALSE)
   }
   
+  # month
   mainDir <- paste(mainDir, month, sep = "/", collapse = "/")
-  if(!file.exists(mainDir))
-  {
+  if(!file.exists(mainDir)){
     dir.create(file.path(mainDir), showWarnings = FALSE)
   }
   
-  mainDir<-paste(mainDir, day, sep = "/", collapse = "/")
+  mainDir <- paste(mainDir, day, sep = "/", collapse = "/")
+  return(mainDir)
+}
+
+#===================================================
+# writeLog(): self-defined function for 寫log
+#================================================
+writeLog <- function(msg, mainDir){
   
-  #寫入檔案
-  fileConn<-file(mainDir)
+  # 寫入檔案
+  fileConn <- file(mainDir)
   logMsg <- paste(format(Sys.time(), "%F %R :"), msg, sep = " ")
-  write(logMsg,file=mainDir,append=TRUE)
-  
+  write(logMsg, file = mainDir, append = TRUE)
   close(fileConn)
-  
 }
 
 #設定資料庫連線
@@ -530,7 +532,21 @@ calResult <- function(data,sensorInfo){
 #3.計算結果
 #4.儲存結果
 
-writeLog("Start RangeNow Process")
+
+mainDir_txt = get_mainDir(type = "txt")
+mainDir_Rout = get_mainDir(type = "Rout")
+writeLog("Start RangeNow Process", mainDir_txt)
+
+errorCatch <- file(mainDir_Rout, open = "wt")
+sink(errorCatch, type = "message")
+
+
+
+
+
+
+
+
 #資料庫連線
 basicConn <- dbConnect(odbc(),
                        Driver = "{SQL Server Native Client 11.0}",
@@ -571,7 +587,13 @@ for (idx in 1:nrow(SensorInfoList)) {
   
 }
 
-writeLog("Finish RangeNow Process")
+writeLog("Finish RangeNow Process", mainDir_txt)
+sink(type = "message")
+close(errorCatch)
+
+
+
+
 
 
 dbDisconnect(basicConn)
