@@ -3,6 +3,7 @@
 #統整合理範圍上下界
 
 # 程式碼最後更新時間:
+#   2022/01/13 please see "show log"
 #   2022/01/13 取消寫入[CALCUlATE_TIME] = getdate()
 #   2022/01/13 新增normal_outlier_range()取代sigma3outlier_range()
 #   2020/12/22
@@ -388,30 +389,7 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
   
   ODV_LU
   
-  #data0=na_median(df,var,sinfo)
   
-  ##print("da")
-  
-  ##可能讀進來為字串，需轉數字型態
-  #data0[[var]] <- as.numeric(data0[[var]])
-  
-  #da=data0 %>%
-  #  mutate("前時間"=lag(ltime,default=ltime[1]),
-  #         "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
-  #         "前後差" = abs(前面一個 - data0[[var]]),
-  #         #"變動下限"=前面一個-ODV_LU$ODV_U,
-  #         #"變動上限"=前面一個+ODV_LU$ODV_U,
-  #         "可容忍跳動最大值"=ODV_LU$ODV_U,
-  #         #"chebyshev正常範圍下界"=LU$chebyshev下界,
-  #         #"chebyshev正常範圍上界"=LU$chebyshev上界,
-  #         "chebyshev跳動異常值"=1) %>%
-  #  filter(between(data0[[var]],min,max))
-  #da2=reshape::rename(da,c(chebyshev跳動異常值=paste(var,"_chebyshev跳動異常值",sep="")))
-  
-  ##& !between(da[[var]],LU$chebyshev下界,LU$chebyshev上界)排除落於chebyshev正常範圍內
-  #outlier=da2 %>%
-  #  filter( 前後差 > ODV_LU$ODV_U & 中位數補值!=1 & 前一筆補中位數!=1)
-  #outlier
   
 }
 
@@ -477,10 +455,70 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
   sqlStr
 }
 
+changeDetect = function(data, sensorInfo){
+  DATA = data
+  data = DATA[[sensorInfo$VALUE_COL]]
+  stop = 0; cut_seq = NULL; CPD = 0
+  while(stop==0){
+    min = 1
+    max = n = length(data)
+    while(TRUE){
+      cut = sample(min:max, 1)
+      c1 = data[1:cut]; c2 = data[cut+1:n]
+      r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+      r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+      if(r1 > r2){max = cut}else{min = cut}
+      if((max-min)==1){
+        c1 = data[1:min]; c2 = data[min+1:n]
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+        r_min = abs(r1-r2)
+        c1 = data[1:max]; c2 = data[max+1:n]
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+        r_max = abs(r1-r2)
+        if(r_min < r_max){cut = min}else{cut = max}
+        break
+      }
+    }
+    m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
+    if(m1 < m2){
+      if(max(data[1:cut], na.rm = TRUE) < min(data[cut+1:n], na.rm = TRUE)){
+        print(paste(source, "has a change point:", cut))
+        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+      }else{
+        stop = 1
+        if(CPD==0){
+          print("No change points are found.")
+        }else{
+          print("All change points are found.")
+        }
+      }
+    }else{
+      if(min(data[1:cut], na.rm = TRUE) > max(data[cut+1:n], na.rm = TRUE)){
+        print(paste(source, "has a change point:", cut))
+        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+      }else{
+        stop = 1
+        if(CPD==0){
+          print("No change points are found.")
+        }else{
+          print("All change points are found.")
+        }
+      }
+    }
+    if(stop==0){data = data[cut+1:n]}
+  }
+  
+  return()
+}
 
 #計算結果
 #calResult <- function(data,col,sn){
-calResult <- function(data,sensorInfo){  
+calResult <- function(data, sensorInfo){  
+  
+  CPD_result = changeDetect(data, sensorInfo)
+  changeFound = CPD_result
   
   #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
   normalResult <- normal_outlier_range(data, sensorInfo)
