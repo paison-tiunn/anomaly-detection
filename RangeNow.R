@@ -578,7 +578,7 @@ calResult <- function(data, sensorInfo){
     JUMP_VALUE <- 0
   }
   
-  
+  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}
     
     
   # 資料更新回資料庫
