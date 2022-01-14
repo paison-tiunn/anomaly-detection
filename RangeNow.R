@@ -106,51 +106,18 @@ if (!require('odbc', warn.conflicts = FALSE))
 
 
 
-### 3倍標準差外的outlier ------------------------------
-sigma3outlier_range <- function(df,sinfo){   
-  
-  min=0#description(df,variable)$min
-  max=9999#description(df,variable)$max
-  #Station=description(df,variable)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
-  #print("min and max is ")
-  #print(min)
-  #print(max)
-  
-  
-  
-  df1=df %>%
-    #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
-    filter(between(.data[[sinfo$VALUE_COL]],min,max)) %>%
-    dplyr::summarise(lower_bound=mean(.data[[sinfo$VALUE_COL]])-3*sd(.data[[sinfo$VALUE_COL]]),upper_bound=mean(.data[[sinfo$VALUE_COL]])+3*sd(.data[[sinfo$VALUE_COL]])) 
-  #mutate("監測站站名"=Station,"變數"=variable)
-  df1
-  
-}
-
 
 #================================================================================================
 # normal_outlier_range(): self-defined function for outlier detection under normal distribution
 #==============================================================================================
 normal_outlier_range <- function(df, sinfo){
   
-  #min = 0; max = 9999
-  if (!is.na(sinfo$SENSOR_DOWN)) {min = sinfo$SENSOR_DOWN}
-  if (!is.na(sinfo$SENSOR_UP)) {max = sinfo$SENSOR_UP}
-  df %<>% filter(between(.data[[sinfo$VALUE_COL]], min, max))
-  
   #p = .001
   if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
   
   df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
                            upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
-  df
+  return(df)
 }
 
 #=============================================================================
@@ -169,12 +136,9 @@ param_estim_gamma = function(x){
 #==================================================================================
 gamma_outlier_range <- function(df, sinfo){
   
-  #min = 0; max = 9999; p = .001
+  # p = .001
   #if(!is.null(sinfo)){
-    if (!is.na(sinfo$SENSOR_DOWN)) {min = sinfo$SENSOR_DOWN}
-    if (!is.na(sinfo$SENSOR_UP)) {max = sinfo$SENSOR_UP}
     if (!is.na(sinfo$GAMMA_P)) {p = sinfo$GAMMA_P}
-    df %<>% filter(between(.data[[sinfo$VALUE_COL]], min, max))
   #}
   
   #x = .data[[sinfo$VALUE_COL]]
@@ -216,26 +180,10 @@ gamma_outlier_range <- function(df, sinfo){
 ### 盒狀圖1.5倍IQR外的outlier -------------------------
 IQRoutlier_range <- function(df,sinfo){
   
-  min=0#description(df,variable)$min
-  max=9999#description(df,variable)$max
-  #Station=description(df,variable)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
-  
-  df1 =  df %>%
-    #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
-    filter(between(.data[[sinfo$VALUE_COL]],min,max) ) %>%
+  df1 = df %>%
     dplyr::summarise(lower_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.25)-1.5*IQR(.data[[sinfo$VALUE_COL]]),
-                     upper_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.75)+1.5*IQR(.data[[sinfo$VALUE_COL]])) #%>% 
-  #mutate("監測站站名"=Station,"變數"=variable)
-  
-  df1
-  
+                     upper_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.75)+1.5*IQR(.data[[sinfo$VALUE_COL]]))
+  return(df1)
 }
 
 
@@ -245,18 +193,8 @@ IQRoutlier_range <- function(df,sinfo){
 #chebyshev正常範圍上下界
 #p1:有多少比例為潛在的離群值，由p1計算k，可得truncated data的上下界(避免異常值所造成的bias)
 #p2:預期會有多少比例的outlier，通常比p1小，outlier比例不超過p2
-chebyshev_range <-function(df,sinfo){
+chebyshev_range <- function(df, sinfo){
   
-  min=0 #description(df,var)$min
-  max=9999 #description(df,var)$max
-  #Station=description(df,var)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
   p1 = 0.2
   p2 = 0.5
   if (!is.na(sinfo$CHE_P1)) {
@@ -267,17 +205,18 @@ chebyshev_range <-function(df,sinfo){
     p2 = sinfo$CHE_P2
   }
   
-  k1=1/sqrt(p1)
-  ODV_1LU=df %>% 
-    filter(between(.data[[sinfo$VALUE_COL]],min,max)) %>%
+  k1 = 1/sqrt(p1)
+  ODV_1LU = df %>% 
     dplyr::summarise(Mean_all=mean(.data[[sinfo$VALUE_COL]]),SD_all=sd(.data[[sinfo$VALUE_COL]])) %>%
-    mutate(ODV_1L=Mean_all-k1*SD_all,ODV_1U=Mean_all+k1*SD_all)
+    mutate(ODV_1L = Mean_all-k1*SD_all,
+           ODV_1U = Mean_all+k1*SD_all)
   
-  k2=1/sqrt(p2)
-  ODV_LU=df %>% 
+  k2 = 1/sqrt(p2)
+  ODV_LU = df %>% 
     filter(between(.data[[sinfo$VALUE_COL]],ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
     dplyr::summarise(Mean_trun=mean(.data[[sinfo$VALUE_COL]]),SD_trun=sd(.data[[sinfo$VALUE_COL]])) %>%
-    mutate(ODV_L=Mean_trun-k2*SD_trun,ODV_U=Mean_trun+k2*SD_trun)
+    mutate(ODV_L = Mean_trun-k2*SD_trun,
+           ODV_U = Mean_trun+k2*SD_trun)
   
   ODV_LU
 }
@@ -286,17 +225,6 @@ chebyshev_range <-function(df,sinfo){
 #1.前後跳動過大
 ###na補每月中位數 ----------
 na_median <- function(data, var, sinfo){
-  
-  min=0#description(data,var)$min
-  max=9999#description(data,var)$max
-  #Station=description(data,var)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
   
   #print("na_median da")
   #print(var)
@@ -320,7 +248,6 @@ na_median <- function(data, var, sinfo){
   #print("after na_median da")
   #每個月的中位數，整月若為NA，則不會顯現
   Median =  da %>%
-    filter(between(.data[[var]],min,max)) %>%
     group_by(year = year(ltime), month = month(ltime)) %>%
     dplyr::summarise("median" = format(round(median(.data[[var]], na.rm = TRUE), 3),
                                        nsmall = 3))
@@ -363,22 +290,14 @@ na_median <- function(data, var, sinfo){
 }
 
 
+
+
 ###補值完算前後差異，使用chebyshev找出跳動最大值 -----------
 #前後差可容忍跳動最大值
 # p1目前取0.1還不錯，p2取0.005
-chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
+chebyshev_jumprange_na <- function(df, sinfo, p1 = 0.1, p2){
   
-  #print("chebyshev_jumprange_na")
-  min=0 #description(df,var)$min
-  max=9999 #description(df,var)$max
-  #Station=description(df,var)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
+
   
   ###var需變成字串
   var = as.character(sinfo$VALUE_COL)
@@ -393,11 +312,9 @@ chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
   data0[[var]] <- as.numeric(data0[[var]])
   
   data=data0 %>%
-    mutate("前時間"=lag(ltime,default=ltime[1]),
-           "前面一個"=lag(data0[[var]],default=data0[[var]][1]),
-           "前後差" = abs(前面一個 - data0[[var]])
-    ) %>%
-    filter(between(data0[[var]],min,max) )
+    mutate("前時間" = lag(ltime,default=ltime[1]),
+           "前面一個" = lag(data0[[var]],default=data0[[var]][1]),
+           "前後差" = abs(前面一個 - data0[[var]]))
   
   
   
@@ -417,34 +334,18 @@ chebyshev_jumprange_na <-function(df,sinfo,p1=0.1,p2){
 }
 
 ###在chebyshev前後差可容忍跳動最大值外outlier的資料時間點 ------------
-chebyshev_jumpdata_na <- function(df,sinfo,var){
-  min=0 #description(df,var)$min
-  max=9999 #description(df,var)$max
-  #Station=description(df,var)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
-  
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
+chebyshev_jumpdata_na <- function(df, sinfo, var){
   
   # p21 = 0.1  #代號p21統一成p1
   # p22 = 0.05 #代號p22統一成p2
-  p1 = 0.1
-  p2 = 0.05
+
+    p1 = 0.1; p2 = 0.05
   
-  
-  if (!is.na(sinfo$JUMP_P1)) {
-    p1 = sinfo$JUMP_P1    
-  }
-  
-  if (!is.na(sinfo$JUMP_P2)) {
-    p2 = sinfo$JUMP_P2
-  }
+  if (!is.na(sinfo$JUMP_P1)) {p1 = sinfo$JUMP_P1}
+  if (!is.na(sinfo$JUMP_P2)) {p2 = sinfo$JUMP_P2}
   
   #ODV_LU=chebyshev_jumprange_na(df,sinfo,p21,p22)  #修改統一代號p21->p1，p22->p2
-  ODV_LU=chebyshev_jumprange_na(df,sinfo,p1,p2)
+  ODV_LU = chebyshev_jumprange_na(df, sinfo, p1, p2)
   
   ODV_LU
   
@@ -590,10 +491,14 @@ calResult <- function(data, sensorInfo){
   changeFound = CPD_result$CPD
   if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
   
+  
+  #min = 0; max = 9999
+  if (!is.na(sensorInfo$SENSOR_DOWN)) {min = sensorInfo$SENSOR_DOWN}
+  if (!is.na(sensorInfo$SENSOR_UP)) {max = sensorInfo$SENSOR_UP}
+  data %<>% filter(between(.data[[sensorInfo$VALUE_COL]], min, max))
+  
+  
   CHECK_LIST = sensorInfo$CHECK_LIST
-  
-  
-  #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
   normalResult <- normal_outlier_range(data, sensorInfo)
   if(str_detect(CHECK_LIST, "9")){
     gammaResult = gamma_outlier_range(data, sensorInfo)
@@ -624,21 +529,11 @@ calResult <- function(data, sensorInfo){
   #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
   JUMP_VALUE <- temp_outlier$ODV_U
   
-  if(is.numeric(CHE_UP)){
-    CHE_UP <- round(CHE_UP , 3)
-  }
+  if(is.numeric(CHE_UP)){CHE_UP <- round(CHE_UP , 3)}
+  if(is.numeric(CHE_DOWN)){CHE_DOWN <- round(CHE_DOWN , 3)}
   
-  if(is.numeric(CHE_DOWN)){
-    CHE_DOWN <- round(CHE_DOWN , 3)
-  }
-  
-  if(is.numeric(BOX_UP)){
-    BOX_UP <- round(BOX_UP , 3)
-  }
-  
-  if(is.numeric(BOX_DOWN)){
-    BOX_DOWN <- round(BOX_DOWN , 3)
-  }
+  if(is.numeric(BOX_UP)){BOX_UP <- round(BOX_UP , 3)}
+  if(is.numeric(BOX_DOWN)){BOX_DOWN <- round(BOX_DOWN , 3)}
   
   if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
   if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
