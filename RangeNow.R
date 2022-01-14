@@ -598,7 +598,7 @@ calResult <- function(data, sensorInfo){
   if(str_detect(CHECK_LIST, "9")){
     gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMME_UP , 3)}
+    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
     if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
   }else{
     GAMMA_UP = GAMMA_DOWN = "NULL"
