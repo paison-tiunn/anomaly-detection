@@ -594,7 +594,14 @@ calResult <- function(data, sensorInfo){
   
   #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
   normalResult <- normal_outlier_range(data, sensorInfo)
-  gammaResult = gamma_outlier_range(data, sensorInfo)
+  if(str_detect(CHECK_LIST, "9")){
+    gammaResult = gamma_outlier_range(data, sensorInfo)
+    GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
+    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMME_UP , 3)}
+    if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
+  }else{
+    GAMMA_UP = GAMMA_DOWN = "NULL"
+  }
   
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
@@ -611,7 +618,7 @@ calResult <- function(data, sensorInfo){
   
   #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
   NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
-  GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
+  
   
   #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
   JUMP_VALUE <- temp_outlier$ODV_U
@@ -634,8 +641,6 @@ calResult <- function(data, sensorInfo){
   
   if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
   if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
-  if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMME_UP , 3)}
-  if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
   
   if(is.numeric(JUMP_VALUE)){
     JUMP_VALUE <- round(JUMP_VALUE , 3)
