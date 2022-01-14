@@ -578,7 +578,7 @@ calResult <- function(data, sensorInfo){
     JUMP_VALUE <- 0
   }
   
-  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}
+  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
     
     
   # 資料更新回資料庫
