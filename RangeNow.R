@@ -184,6 +184,7 @@ gamma_outlier_range <- function(df, sinfo){
   }
   param = param_estim_gamma(x)
   
+  lower = FALSE
   if(!lower){
     if(!negative_data){
       df1 = df %>%
