@@ -153,6 +153,63 @@ normal_outlier_range <- function(df, sinfo){
   df
 }
 
+#=============================================================================
+# param_estim_gamma(): self-defined function for gamma parameter estimation
+#=============================================================================
+param_estim_gamma = function(x){
+  
+  x[which(x==0)] = min(x[which(x!=0)])/2
+  s = log(mean(x)) - mean(log(x)); k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
+  theta = mean(x)/k
+  return(c(k, 1/theta))
+}
+
+#=================================================================================
+# gamma_outlier_range(): self-defined function for outlier detection under gamma
+#==================================================================================
+gamma_outlier_range <- function(df, sinfo){
+  
+  #min = 0; max = 9999; p = .001
+  #if(!is.null(sinfo)){
+    if (!is.na(sinfo$SENSOR_DOWN)) {min = sinfo$SENSOR_DOWN}
+    if (!is.na(sinfo$SENSOR_UP)) {max = sinfo$SENSOR_UP}
+    if (!is.na(sinfo$GAMMA_P)) {p = sinfo$GAMMA_P}
+    df %<>% filter(between(.data[[sinfo$VALUE_COL]], min, max))
+  #}
+  
+  #x = .data[[sinfo$VALUE_COL]]
+  var_name = sinfo$VALUE_COL; x = df[[var_name]]; negative_data = FALSE
+  if(max(x, na.rm = TRUE) <= 0 & min(x, na.rm = TRUE) <= 0){
+    x = -x; negative_data = TRUE
+  }
+  param = param_estim_gamma(x)
+  
+  if(!lower){
+    if(!negative_data){
+      df1 = df %>%
+        dplyr::summarise(lower_bound = 0,
+                         upper_bound = qgamma(1-p, param[1], param[2]))
+    }else{
+      df1 = df %>%
+        dplyr::summarise(lower_bound = -qgamma(1-p, param[1], param[2]),
+                         upper_bound = 0)
+    }
+  }else{
+    if(!negative_data){
+      df1 = df %>%
+        dplyr::summarise(lower_bound = qgamma(p/2, param[1], param[2]),
+                         upper_bound = qgamma(1-p/2, param[1], param[2]))
+    }else{
+      df1 = df %>%
+        dplyr::summarise(lower_bound = -qgamma(1-p/2, param[1], param[2]),
+                         upper_bound = -qgamma(p/2, param[1], param[2]))
+    }
+  }
+  return(df1)
+}
+
+
+
 
 
 ### 盒狀圖1.5倍IQR外的outlier -------------------------
@@ -227,7 +284,7 @@ chebyshev_range <-function(df,sinfo){
 
 #1.前後跳動過大
 ###na補每月中位數 ----------
-na_median <- function(data,var,sinfo){
+na_median <- function(data, var, sinfo){
   
   min=0#description(data,var)$min
   max=9999#description(data,var)$max
@@ -247,7 +304,7 @@ na_median <- function(data,var,sinfo){
   #data[[as.character(sinfo$TIME_COL)]]
   #year(data[[as.character(sinfo$TIME_COL)]])
   
-  da= data %>%
+  da = data %>%
     select(.data[[var]]) %>%
     #mutate("ltime" = .data[[sinfo$TIME_COL]]) %>%
     #dplyr::rename(sinfo$TIME_COL="ltime") #%>%
@@ -255,32 +312,33 @@ na_median <- function(data,var,sinfo){
            "是否遺漏"=ifelse(is.na(data[[var]]),1,0))
   #print(da)
   
-  m= da %>%
-    group_by(year=year(ltime),month=month(ltime)) %>%
-    dplyr::summarise("遺漏總和"=sum(是否遺漏))
+  m = da %>%
+    group_by(year = year(ltime), month = month(ltime)) %>%
+    dplyr::summarise("遺漏總和" = sum(是否遺漏))
   
   #print("after na_median da")
   #每個月的中位數，整月若為NA，則不會顯現
-  Median=  da %>%
+  Median =  da %>%
     filter(between(.data[[var]],min,max)) %>%
-    group_by(year=year(ltime),month=month(ltime)) %>%
-    dplyr::summarise("median"=format(round(median(.data[[var]],na.rm = TRUE),3),nsmall=3))
+    group_by(year = year(ltime), month = month(ltime)) %>%
+    dplyr::summarise("median" = format(round(median(.data[[var]], na.rm = TRUE), 3),
+                                       nsmall = 3))
   
   
   
-  m1=left_join(m,Median,by=c("year","month")) %>%
-    select(year,month,median)
+  m1 = left_join(m,Median, by = c("year","month")) %>%
+    select(year, month, median)
   
   
   
   #上面月份為na的使用相同月分的最後一筆資料補起來，這樣每個月都有值
   #相同月分的最後一筆資料，可用slice() n():最後一筆
-  last= Median %>%
+  last = Median %>%
     filter(median!="NA") %>%
     group_by(month) %>%
     slice(n()) %>%
     select(month,median) %>%
-    reshape::rename(c(median="median.month"))
+    reshape::rename(c(median = "median.month"))
   
   
   #將NA補中位數
@@ -395,6 +453,10 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
 
 #temp_outlier = chebyshev_jumpdata_na(data.list.WL[[1]],"Temp",0.1,0.005)
 
+
+#=======================================================================
+# get_mainDir(): self-defined function for writeLog() and errorCatch
+#======================================================================
 get_mainDir = function(type){
   
   #檢查路徑
@@ -455,6 +517,9 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
   sqlStr
 }
 
+#=========================================================================================
+# changeDetect(): self-defined function for change point detection used in calResult()
+#========================================================================================
 changeDetect = function(data, sensorInfo){
   DATA = data
   data = DATA[[sensorInfo$VALUE_COL]]
@@ -524,8 +589,12 @@ calResult <- function(data, sensorInfo){
   changeFound = CPD_result$CPD
   if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
   
+  CHECK_LIST = sensorInfo$CHECK_LIST
+  
+  
   #sigma3Result <-  sigma3outlier_range(data,sensorInfo)
   normalResult <- normal_outlier_range(data, sensorInfo)
+  gammaResult = gamma_outlier_range(data, sensorInfo)
   
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
@@ -542,6 +611,7 @@ calResult <- function(data, sensorInfo){
   
   #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
   NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
+  GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
   
   #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
   JUMP_VALUE <- temp_outlier$ODV_U
@@ -562,13 +632,10 @@ calResult <- function(data, sensorInfo){
     BOX_DOWN <- round(BOX_DOWN , 3)
   }
   
-  if(is.numeric(NORMAL_UP)){
-    NORMAL_UP <- round(NORMAL_UP , 3)
-  }
-  
-  if(is.numeric(NORMAL_DOWN)){
-    NORMAL_DOWN <- round(NORMAL_DOWN , 3)
-  }
+  if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
+  if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
+  if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMME_UP , 3)}
+  if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
   
   if(is.numeric(JUMP_VALUE)){
     JUMP_VALUE <- round(JUMP_VALUE , 3)
@@ -585,7 +652,8 @@ calResult <- function(data, sensorInfo){
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,NORMAL_UP,", [NORMAL_DOWN] = ",NORMAL_DOWN,", ")
+  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN,", ")
+  sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
   sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
   #sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
