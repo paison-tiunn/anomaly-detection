@@ -512,7 +512,7 @@ changeDetect = function(data, sensorInfo){
     if(stop==0){data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]}
   }
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
-  return(list(DATA, CPD, CHANGE_TIME))
+  return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
 }
 
 #計算結果
