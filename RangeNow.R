@@ -207,14 +207,16 @@ chebyshev_range <- function(df, sinfo){
   
   k1 = 1/sqrt(p1)
   ODV_1LU = df %>% 
-    dplyr::summarise(Mean_all=mean(.data[[sinfo$VALUE_COL]]),SD_all=sd(.data[[sinfo$VALUE_COL]])) %>%
+    dplyr::summarise(Mean_all = mean(.data[[sinfo$VALUE_COL]]),
+                     SD_all = sd(.data[[sinfo$VALUE_COL]])) %>%
     mutate(ODV_1L = Mean_all-k1*SD_all,
            ODV_1U = Mean_all+k1*SD_all)
   
   k2 = 1/sqrt(p2)
   ODV_LU = df %>% 
-    filter(between(.data[[sinfo$VALUE_COL]],ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
-    dplyr::summarise(Mean_trun=mean(.data[[sinfo$VALUE_COL]]),SD_trun=sd(.data[[sinfo$VALUE_COL]])) %>%
+    filter(between(.data[[sinfo$VALUE_COL]], ODV_1LU$ODV_1L, ODV_1LU$ODV_1U)) %>%
+    dplyr::summarise(Mean_trun = mean(.data[[sinfo$VALUE_COL]]),
+                     SD_trun = sd(.data[[sinfo$VALUE_COL]])) %>%
     mutate(ODV_L = Mean_trun-k2*SD_trun,
            ODV_U = Mean_trun+k2*SD_trun)
   
@@ -270,18 +272,19 @@ na_median <- function(data, var, sinfo){
   
   
   #將NA補中位數
-  lm1=left_join(m1,last,by=c("month"))%>%
-    mutate(median = ifelse(is.na(median),median.month,median)) %>%
-    select(year,month,median)
+  lm1 = left_join(m1,last,by=c("month"))%>%
+    mutate(median = ifelse(is.na(median), median.month, median)) %>%
+    select(year, month, median)
   
   
   #原始資料na補中位數
-  h=data[[var]]
+  h = data[[var]]
   
-  DATA= left_join(da,lm1,by=c("year","month")) %>%
-    mutate( var = ifelse(is.na(h),median,h),"中位數補值"=ifelse(is.na(h),1,0),
-            "前一筆補中位數"=lag(中位數補值,default=中位數補值[1])) %>%
-    select(氣象變數,ltime,var,中位數補值,前一筆補中位數) %>%
+  DATA = left_join(da, lm1, by = c("year","month")) %>%
+    mutate( var = ifelse(is.na(h), median, h),
+            "中位數補值" = ifelse(is.na(h), 1, 0),
+            "前一筆補中位數" = lag(中位數補值, default = 中位數補值[1])) %>%
+    select(氣象變數, ltime, var, 中位數補值, 前一筆補中位數) %>%
     reshape::rename(c(var=var))
   
   DATA
@@ -318,16 +321,18 @@ chebyshev_jumprange_na <- function(df, sinfo, p1 = 0.1, p2){
   
   
   
-  k1=1/sqrt(p1)
-  ODV_1LU=data  %>%
+  k1 = 1/sqrt(p1)
+  ODV_1LU = data  %>%
     dplyr::summarise(前後差平均_all=mean(前後差),前後差標準差_all=sd(前後差)) %>%
-    mutate(ODV_1L=前後差平均_all-k1*前後差標準差_all,ODV_1U=前後差平均_all+k1*前後差標準差_all)
+    mutate(ODV_1L = 前後差平均_all-k1*前後差標準差_all,
+           ODV_1U = 前後差平均_all+k1*前後差標準差_all)
   
-  k2=1/sqrt(p2)
-  ODV_LU=data %>%
+  k2 = 1/sqrt(p2)
+  ODV_LU = data %>%
     filter(between(前後差,ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
     dplyr::summarise(前後差平均_trun=mean(前後差),前後差標準差_trun=sd(前後差)) %>%
-    mutate(ODV_L=前後差平均_trun-k2*前後差標準差_trun,ODV_U=前後差平均_trun+k2*前後差標準差_trun)
+    mutate(ODV_L = 前後差平均_trun-k2*前後差標準差_trun,
+           ODV_U = 前後差平均_trun+k2*前後差標準差_trun)
   
   
   ODV_LU
