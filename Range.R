@@ -97,35 +97,71 @@ if (!require('odbc', warn.conflicts = FALSE))
 
 
 
-### 3倍標準差外的outlier ------------------------------
-sigma3outlier_range <- function(df,sinfo){   
+#================================================================================================
+# normal_outlier_range(): self-defined function for outlier detection under normal distribution
+#==============================================================================================
+normal_outlier_range <- function(df, sinfo){
   
-  min=0#description(df,variable)$min
-  max=9999#description(df,variable)$max
-  #Station=description(df,variable)$Station
-  if (!is.na(sinfo$SENSOR_DOWN)) {
-    min = sinfo$SENSOR_DOWN
-  }
+  #p = .001
+  if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
   
-  if (!is.na(sinfo$SENSOR_UP)) {
-    max = sinfo$SENSOR_UP
-  }
-  #print("min and max is ")
-  #print(min)
-  #print(max)
-  
-  
-  
-  df1=df %>%
-    #mutate(year=year(LocalTime),month=month(LocalTime),監測站站名=Station) %>%
-    filter(between(.data[[sinfo$VALUE_COL]],min,max)) %>%
-    dplyr::summarise(lower_bound=mean(.data[[sinfo$VALUE_COL]])-3*sd(.data[[sinfo$VALUE_COL]]),upper_bound=mean(.data[[sinfo$VALUE_COL]])+3*sd(.data[[sinfo$VALUE_COL]])) 
-    #mutate("監測站站名"=Station,"變數"=variable)
-  df1
-  
+  df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
+                           upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
+  return(df)
 }
 
+#=============================================================================
+# param_estim_gamma(): self-defined function for gamma parameter estimation
+#=============================================================================
+param_estim_gamma = function(x){
+  
+  x[which(x==0)] = min(x[which(x!=0)])/2
+  s = log(mean(x)) - mean(log(x)); k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
+  theta = mean(x)/k
+  return(c(k, 1/theta))
+}
 
+#=================================================================================
+# gamma_outlier_range(): self-defined function for outlier detection under gamma
+#==================================================================================
+gamma_outlier_range <- function(df, sinfo){
+  
+  # p = .001
+  #if(!is.null(sinfo)){
+  if (!is.na(sinfo$GAMMA_P)) {p = sinfo$GAMMA_P}
+  #}
+  
+  #x = .data[[sinfo$VALUE_COL]]
+  var_name = sinfo$VALUE_COL; x = df[[var_name]]; negative_data = FALSE
+  if(max(x, na.rm = TRUE) <= 0 & min(x, na.rm = TRUE) <= 0){
+    x = -x; negative_data = TRUE
+  }
+  param = param_estim_gamma(x)
+  
+  lower = FALSE
+  if(!lower){
+    if(!negative_data){
+      df1 = df %>%
+        dplyr::summarise(lower_bound = 0,
+                         upper_bound = qgamma(1-p, param[1], param[2]))
+    }else{
+      df1 = df %>%
+        dplyr::summarise(lower_bound = -qgamma(1-p, param[1], param[2]),
+                         upper_bound = 0)
+    }
+  }else{
+    if(!negative_data){
+      df1 = df %>%
+        dplyr::summarise(lower_bound = qgamma(p/2, param[1], param[2]),
+                         upper_bound = qgamma(1-p/2, param[1], param[2]))
+    }else{
+      df1 = df %>%
+        dplyr::summarise(lower_bound = -qgamma(1-p/2, param[1], param[2]),
+                         upper_bound = -qgamma(p/2, param[1], param[2]))
+    }
+  }
+  return(df1)
+}
 
 
 ### 盒狀圖1.5倍IQR外的outlier -------------------------
@@ -374,39 +410,48 @@ chebyshev_jumpdata_na <- function(df,sinfo,var){
 #temp_outlier = chebyshev_jumpdata_na(data.list.WL[[1]],"Temp",0.1,0.005)
 
 
-#寫log
-writeLog<-function(msg){
+#=======================================================================
+# get_mainDir(): self-defined function for writeLog() and errorCatch
+#======================================================================
+get_mainDir = function(type){
+  
   #檢查路徑
   mainDir <- "C:/Project/log"
-  today <- Sys.Date()
+  today <- Sys.time()
+  year <- format(today, format = "%Y")
+  month <- format(today, format = "%m")
+  if(type=="txt"){day <- format(today, format = paste0("%F.", type))}
+  if(type=="Rout"){day <- format(today, format = paste0("%F_%H-%M-%S.", type))}
   
-  year<-format(today, format="%Y")
-  month<-format(today, format="%m")
-  day<-format(today, format="%Y-%m-%d.txt")
-  
-  paste(mainDir, year,"", sep = "/", collapse = "/")
-  
+  # year
   mainDir <- paste(mainDir, year, sep = "/", collapse = "/")
-  if(!file.exists(mainDir))
-  {
+  if(!file.exists(mainDir)){
     dir.create(file.path(mainDir), showWarnings = FALSE)
   }
   
+  # month
   mainDir <- paste(mainDir, month, sep = "/", collapse = "/")
-  if(!file.exists(mainDir))
-  {
+  if(!file.exists(mainDir)){
     dir.create(file.path(mainDir), showWarnings = FALSE)
   }
   
-  mainDir<-paste(mainDir, day, sep = "/", collapse = "/")
+  mainDir <- paste(mainDir, day, sep = "/", collapse = "/")
+  return(mainDir)
+}
+
+
+
+
+#===================================================
+# writeLog(): self-defined function for 寫log
+#================================================
+writeLog <- function(msg, mainDir){
   
-  #寫入檔案
-  fileConn<-file(mainDir)
+  # 寫入檔案
+  fileConn <- file(mainDir)
   logMsg <- paste(format(Sys.time(), "%F %R :"), msg, sep = " ")
-  write(logMsg,file=mainDir,append=TRUE)
-  
+  write(logMsg, file = mainDir, append = TRUE)
   close(fileConn)
-  
 }
 
 #設定資料庫連線
@@ -432,52 +477,126 @@ getSensorSQL <- function(tbName,time_Col,value_col,sid_Col,sensorID,period){
 }
 
 
+
+#=========================================================================================
+# changeDetect(): self-defined function for change point detection used in calResult()
+#========================================================================================
+changeDetect = function(data, sensorInfo){
+  DATA = data
+  data = DATA[[sensorInfo$VALUE_COL]]
+  time = DATA[[sensorInfo$TIME_COL]]; CHANGE_TIME = time[1]
+  source = "[not defined yet]"
+  stop = 0; cut_seq = NULL; CPD = 0
+  while(stop==0){
+    min = 1
+    max = n = length(data)
+    while(TRUE){
+      cut = sample(min:max, 1)
+      c1 = data[1:cut]; c2 = data[cut+1:n]
+      r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+      r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+      if(r1 > r2){max = cut}else{min = cut}
+      if((max-min)==1){
+        c1 = data[1:min]; c2 = data[min+1:n]
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+        r_min = abs(r1-r2)
+        c1 = data[1:max]; c2 = data[max+1:n]
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+        r_max = abs(r1-r2)
+        if(r_min < r_max){cut = min}else{cut = max}
+        break
+      }
+    }
+    m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
+    if(m1 < m2){
+      if(max(data[1:cut], na.rm = TRUE) < min(data[cut+1:n], na.rm = TRUE)){
+        print(paste(source, "has a change point:", cut))
+        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+      }else{
+        stop = 1
+        if(CPD==0){
+          print("No change points are found.")
+        }else{
+          print("All change points are found.")
+        }
+      }
+    }else{
+      if(min(data[1:cut], na.rm = TRUE) > max(data[cut+1:n], na.rm = TRUE)){
+        print(paste(source, "has a change point:", cut))
+        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+      }else{
+        stop = 1
+        if(CPD==0){
+          print("No change points are found.")
+        }else{
+          print("All change points are found.")
+        }
+      }
+    }
+    if(stop==0){data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]}
+  }
+  DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
+  return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
+}
+
+
 #計算結果
 #calResult <- function(data,col,sn){
 calResult <- function(data,sensorInfo){  
   
-  sigma3Result <-  sigma3outlier_range(data,sensorInfo)
+  CPD_result = changeDetect(data, sensorInfo)
+  data = CPD_result$DATA
+  changeFound = CPD_result$CPD
+  if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
+  
+  
+  #min = 0; max = 9999
+  if (!is.na(sensorInfo$SENSOR_DOWN)) {min = sensorInfo$SENSOR_DOWN}
+  if (!is.na(sensorInfo$SENSOR_UP)) {max = sensorInfo$SENSOR_UP}
+  data %<>% filter(between(.data[[sensorInfo$VALUE_COL]], min, max))
+  
+  
+  CHECK_LIST = sensorInfo$CHECK_LIST
+  normalResult <- normal_outlier_range(data, sensorInfo)
+  if(str_detect(CHECK_LIST, "9")){
+    gammaResult = gamma_outlier_range(data, sensorInfo)
+    GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
+    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
+    if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
+  }else{
+    GAMMA_UP = GAMMA_DOWN = "NULL"
+  }
+  
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
   
-
+  
   temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
   #print(temp_outlier$可容忍跳動最大值[1])
-  
+  #writeLog(temp_outlier$可容忍跳動最大值[1])
   
   CHE_UP <- chebyshevResult$ODV_U
   CHE_DOWN <- chebyshevResult$ODV_L
   BOX_UP <- IQRResult$upper_bound
   BOX_DOWN <- IQRResult$lower_bound
-  NORMAL_UP <- sigma3Result$upper_bound
-  NORMAL_DOWN <- sigma3Result$lower_bound
+  
+  #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
+  NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
+  
+  
   #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
   JUMP_VALUE <- temp_outlier$ODV_U
   
+  if(is.numeric(CHE_UP)){CHE_UP <- round(CHE_UP , 3)}
+  if(is.numeric(CHE_DOWN)){CHE_DOWN <- round(CHE_DOWN , 3)}
   
-  if(is.numeric(CHE_UP)){
-    CHE_UP <- round(CHE_UP , 3)
-  }
+  if(is.numeric(BOX_UP)){BOX_UP <- round(BOX_UP , 3)}
+  if(is.numeric(BOX_DOWN)){BOX_DOWN <- round(BOX_DOWN , 3)}
   
-  if(is.numeric(CHE_DOWN)){
-    CHE_DOWN <- round(CHE_DOWN , 3)
-  }
-  
-  if(is.numeric(BOX_UP)){
-    BOX_UP <- round(BOX_UP , 3)
-  }
-  
-  if(is.numeric(BOX_DOWN)){
-    BOX_DOWN <- round(BOX_DOWN , 3)
-  }
-  
-  if(is.numeric(NORMAL_UP)){
-    NORMAL_UP <- round(NORMAL_UP , 3)
-  }
-  
-  if(is.numeric(NORMAL_DOWN)){
-    NORMAL_DOWN <- round(NORMAL_DOWN , 3)
-  }
+  if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
+  if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
   
   if(is.numeric(JUMP_VALUE)){
     JUMP_VALUE <- round(JUMP_VALUE , 3)
@@ -487,13 +606,18 @@ calResult <- function(data,sensorInfo){
     JUMP_VALUE <- 0
   }
   
-  #資料更新回資料庫
+  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
+  
+  
+  # 資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " ,NORMAL_UP,", [NORMAL_DOWN] = ",NORMAL_DOWN,", ")
+  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN,", ")
+  sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
-  sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
+  sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
+  #sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
@@ -507,7 +631,14 @@ calResult <- function(data,sensorInfo){
 #3.計算結果
 #4.儲存結果
 
-writeLog("Start Range Process")
+mainDir_txt = get_mainDir(type = "txt")
+mainDir_Rout = get_mainDir(type = "Rout")
+writeLog("Start RangeNow Process", mainDir_txt)
+
+errorCatch <- file(mainDir_Rout, open = "wt")
+sink(errorCatch, type = "message")
+
+
 #資料庫連線
 basicConn <- dbConnect(odbc(),
                  Driver = "{SQL Server Native Client 11.0}",
@@ -517,8 +648,9 @@ basicConn <- dbConnect(odbc(),
                  PWD = "wj/3ck6tj4",
                  Port = 1433)
 
-#取得需要做計算的儀器
-querySensor <- dbSendQuery(basicConn,"select * from V_Sensor_Info where AUTO_UPDATE=1 and CALCUlATE_TIME < getdate()-update_FQ ")
+# 取得需要做計算的儀器
+dailycheckQuery = "select * from V_Sensor_Info where [AUTO_UPDATE] = 1 and [CALCUlATE_TIME] < getdate() - [update_FQ]"
+querySensor <- dbSendQuery(basicConn, dailycheckQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
@@ -546,8 +678,9 @@ for (idx in 1:nrow(SensorInfoList)) {
   
 }
 
-writeLog("Finish Range Process")
-
+writeLog("Finish Range Process", mainDir_txt)
+sink(type = "message")
+close(errorCatch)
 
 dbDisconnect(basicConn)
 dbDisconnect(SensorConnect)
