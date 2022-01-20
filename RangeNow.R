@@ -10,6 +10,7 @@
 
 #版本: V2_Paison, V1_Keny
 
+source("ReusedFunctions.R")
 
 #自訂函數使用:
 #station_name():選監測站站名中文  
@@ -107,18 +108,18 @@ if (!require('odbc', warn.conflicts = FALSE))
 
 
 
-#================================================================================================
-# normal_outlier_range(): self-defined function for outlier detection under normal distribution
-#==============================================================================================
-normal_outlier_range <- function(df, sinfo){
-  
-  #p = .001
-  if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
-  
-  df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
-                           upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
-  return(df)
-}
+# #================================================================================================
+# # normal_outlier_range(): self-defined function for outlier detection under normal distribution
+# #==============================================================================================
+# normal_outlier_range <- function(df, sinfo){
+#   
+#   #p = .001
+#   if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
+#   
+#   df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
+#                            upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
+#   return(df)
+# }
 
 #=============================================================================
 # param_estim_gamma(): self-defined function for gamma parameter estimation
