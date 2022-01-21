@@ -569,12 +569,15 @@ calResult <- function(data, sensorInfo){
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
   
-  sqlr_Insert <- "INSERT INTO [dbo].[STAT_HISTORY]([CALCUlATE_TIME],[DATA_RANGE],[SENSOR_UP],[SENSOR_DOWN],[CHE_UP],[CHE_DOWN],[CHE_P1],[CHE_P2],"
-  sqlr_Insert <- paste0(sqlr_Insert, "[BOX_UP],[BOX_DOWN],[NORMAL_UP],[NORMAL_DOWN],[NORMAL_P],[GAMMA_UP],[GAMMA_DOWN],[GAMMA_P],[JUMP_VALUE],[JUMP_P1],[JUMP_P2],")
+  sqlr_Insert <- "INSERT INTO [dbo].[STAT_HISTORY]([CALCUlATE_TIME],[DATA_RANGE],[SENSOR_UP],[SENSOR_DOWN],"
+  sqlr_Insert <- paste0(sqlr_Insert, "[CHE_UP],[CHE_DOWN],[CHE_P1],[CHE_P2],")
+  sqlr_Insert <- paste0(sqlr_Insert, "[BOX_UP],[BOX_DOWN],[NORMAL_UP],[NORMAL_DOWN],[NORMAL_P],")
+  sqlr_Insert <- paste0(sqlr_Insert, "[GAMMA_UP],[GAMMA_DOWN],[GAMMA_P],[JUMP_VALUE],[JUMP_P1],[JUMP_P2],")
   sqlr_Insert <- paste0(sqlr_Insert, "[JUMP_VALUE_GAMMA],[JUMP_P_GAMMA],[CHANGE_TIME],[SN],[TIMESTAMP]) Values (")
   sqlr_Insert <- paste0(sqlr_Insert, sensorInfo$EDATE, ", ", sensorInfo$DATA_RANGE, ", ", sensorInfo$SENSOR_UP, ", ", sensorInfo$SENSOR_DOWN, ", ")
   sqlr_Insert <- paste0(sqlr_Insert, CHE_UP, ", ", CHE_DOWN, ", ", sensorInfo$CHE_P1, ", ", sensorInfo$CHE_P2, ", ")
   sqlr_Insert <- paste0(sqlr_Insert, BOX_UP, ", ", BOX_DOWN, ", ", NORMAL_UP, ", ", NORMAL_DOWN, ", ", sensorInfo$NORMAL_P, ", ")
+  sqlr_Insert <- paste0(sqlr_Insert, GAMMA_UP, ", ", GAMMA_DOWN, ", ", sensorInfo$GAMMA_P, ", ")
   sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE, ", ", sensorInfo$JUMP_P1, ", ", sensorInfo$JUMP_P2, ", ")
   sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE_GAMMA, ", ", sensorInfo$JUMP_P_GAMMA, ", ", CHANGE_TIME, ", ", sensorInfo$SN, ", getdate())")
   print(sqlr_Insert)
