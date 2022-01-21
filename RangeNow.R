@@ -553,6 +553,8 @@ calResult <- function(data, sensorInfo){
   }
   
   if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
+  
+  JUMP_VALUE_GAMMA = 15
     
     
   # 資料更新回資料庫
@@ -563,10 +565,20 @@ calResult <- function(data, sensorInfo){
   sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN,", ")
   sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
   sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
-  #sqlr_Update <- paste(sqlr_Update, "[CALCUlATE_TIME] = getdate() ")
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
+  
+  sqlr_Insert <- "INSERT INTO [dbo].[STAT_HISTORY]([CALCUlATE_TIME],[DATA_RANGE],[CHE_UP],[CHE_DOWN],[CHE_P1],[CHE_P2],"
+  sqlr_Insert <- paste0(sqlr_Insert, "[BOX_UP],[BOX_DOWN],[NORMAL_UP],[NORMAL_DOWN],[NORMAL_P],[GAMMA_UP],[GAMMA_DOWN],[GAMMA_P],[JUMP_VALUE],[JUMP_P1],[JUMP_P2],")
+  sqlr_Insert <- paste0(sqlr_Insert, "[JUMP_VALUE_GAMMA],[JUMP_P_GAMMA],[CHANGE_TIME],[SN],[TIMESTAMP]) Values (")
+  sqlr_Insert <- paste0(sqlr_Insert, sensorInfo$EDATE, ", ", sensorInfo$DATA_RANGE, ", ")
+  sqlr_Insert <- paste0(sqlr_Insert, CHE_UP, ", ", CHE_DOWN, ", ", sensorInfo$CHE_P1, ", ", sensorInfo$CHE_P2, ", ")
+  sqlr_Insert <- paste0(sqlr_Insert, BOX_UP, ", ", BOX_DOWN, ", ", NORMAL_UP, ", ", NORMAL_DOWN, ", ", sensorInfo$NORMAL_P, ", ")
+  sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE, ", ", sensorInfo$JUMP_P1, ", ", sensorInfo$JUMP_P2, ", ")
+  sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE_GAMMA, ", ", sensorInfo$JUMP_P_GAMMA, ", ", CHANGE_TIME, ", ", sensorInfo$SN, ", getdate())")
+  print(sqlr_Insert)
+  dbGetQuery(basicConn, sqlr_Insert)
 }
 
 
@@ -605,8 +617,8 @@ basicConn <- dbConnect(odbc(),
 realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[CHECK_LIST],"
 realtimeQuery = paste0(realtimeQuery, "[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],")
 realtimeQuery = paste0(realtimeQuery, "[DATA_RANGE],[SDATE],[EDATE],[SENSOR_UP],[SENSOR_DOWN],[CHE_P1],[CHE_P2],")
-realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P] ")
-realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where AUTO_UPDATE=1 and update_time > getdate()-0.01 order by update_time desc")
+realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P], [JUMP_P_GAMMA] ")
+realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where AUTO_UPDATE = 1 and update_time > getdate()-0.01 order by update_time desc")
 querySensor <- dbSendQuery(basicConn, realtimeQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
