@@ -434,8 +434,7 @@ changeDetect = function(data, sensorInfo){
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
-    min = 1
-    max = n = length(data)
+    min = 1; max = n = length(data)
     while(TRUE){
       cut = sample(min:max, 1)
       c1 = data[1:cut]; c2 = data[cut+1:n]
@@ -458,14 +457,14 @@ changeDetect = function(data, sensorInfo){
     m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
     if(m1 < m2){
       if(max(data[1:cut], na.rm = TRUE) < min(data[cut+1:n], na.rm = TRUE)){
-        print(paste(source, "has a change point:", cut))
+        message(paste(source, "has a change point:", cut))
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
         stop = 1
         if(CPD==0){
-          print("No change points are found.")
+          message("No change points are found.")
         }else{
-          print("All change points are found.")
+          message("All change points are found.")
         }
       }
     }else{
@@ -475,13 +474,15 @@ changeDetect = function(data, sensorInfo){
       }else{
         stop = 1
         if(CPD==0){
-          print("No change points are found.")
+          message("No change points are found.")
         }else{
-          print("All change points are found.")
+          message("All change points are found.")
         }
       }
     }
-    if(stop==0){data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]}
+    if(stop==0){
+      data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
+    }
   }
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
