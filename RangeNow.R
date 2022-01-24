@@ -497,16 +497,17 @@ calResult <- function(data, sensorInfo){
   changeFound = CPD_result$CPD
   if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
   
+  SENSOR_UP = sensorInfo$SENSOR_UP
+  SENSOR_DOWN = sensorInfo$SENSOR_DOWN
   
-  #min = 0; max = 9999
-  if (!is.na(sensorInfo$SENSOR_DOWN)) {min = sensorInfo$SENSOR_DOWN}
-  if (!is.na(sensorInfo$SENSOR_UP)) {max = sensorInfo$SENSOR_UP}
+  if (!is.na(SENSOR_DOWN)) {min = SENSOR_DOWN}
+  if (!is.na(SENSOR_UP)) {max = SENSOR_UP}
   data %<>% filter(between(.data[[sensorInfo$VALUE_COL]], min, max))
   
   
-  CHECK_LIST = sensorInfo$CHECK_LIST
-  normalResult <- normal_outlier_range(data, sensorInfo)
-  if(str_detect(CHECK_LIST, "9")){
+  #CHECK_LIST = sensorInfo$CHECK_LIST
+  
+  if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
     gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
     if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
@@ -515,6 +516,9 @@ calResult <- function(data, sensorInfo){
     GAMMA_UP = GAMMA_DOWN = "NULL"
   }
   
+  #if(str_detect(CHECK_LIST, "9")){}
+  
+  normalResult <- normal_outlier_range(data, sensorInfo)
   IQRResult <-  IQRoutlier_range(data,sensorInfo)
   chebyshevResult <- chebyshev_range(data,sensorInfo)
   
@@ -523,10 +527,8 @@ calResult <- function(data, sensorInfo){
   #print(temp_outlier$可容忍跳動最大值[1])
   #writeLog(temp_outlier$可容忍跳動最大值[1])
   
-  CHE_UP <- chebyshevResult$ODV_U
-  CHE_DOWN <- chebyshevResult$ODV_L
-  BOX_UP <- IQRResult$upper_bound
-  BOX_DOWN <- IQRResult$lower_bound
+  CHE_UP <- chebyshevResult$ODV_U; CHE_DOWN <- chebyshevResult$ODV_L
+  BOX_UP <- IQRResult$upper_bound; BOX_DOWN <- IQRResult$lower_bound
   
   #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
   NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
@@ -617,7 +619,7 @@ basicConn <- dbConnect(odbc(),
                        Port = 1433)
 
 #取得需要做計算的儀器
-realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[CHECK_LIST],"
+realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],"
 realtimeQuery = paste0(realtimeQuery, "[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],")
 realtimeQuery = paste0(realtimeQuery, "[DATA_RANGE],[SDATE],[EDATE],[SENSOR_UP],[SENSOR_DOWN],[CHE_P1],[CHE_P2],")
 realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P], [JUMP_P_GAMMA] ")
