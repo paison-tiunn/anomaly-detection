@@ -436,26 +436,29 @@ changeDetect = function(data, sensorInfo){
   while(stop==0){
     message("stop==0")
     min = 1; max = n = length(data)
-    while(TRUE){
-      cut = sample(min:max, 1)
-      c1 = data[1:cut]; c2 = data[cut+1:n]
-      r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-      r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-      if(r1 > r2){max = cut}else{min = cut}
-      message(paste0("(max-min)==", max-min))
-      if((max-min)==1){
-        c1 = data[1:min]; c2 = data[min+1:n]
+    if(max > min){
+      while(TRUE){
+        cut = sample(min:max, 1)
+        c1 = data[1:cut]; c2 = data[cut+1:n]
         r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
         r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-        r_min = abs(r1-r2)
-        c1 = data[1:max]; c2 = data[max+1:n]
-        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-        r_max = abs(r1-r2)
-        if(r_min < r_max){cut = min}else{cut = max}
-        break
+        if(r1 > r2){max = cut}else{min = cut}
+        message(paste0("(max-min)==", max-min))
+        if((max-min)==1){
+          c1 = data[1:min]; c2 = data[min+1:n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_min = abs(r1-r2)
+          c1 = data[1:max]; c2 = data[max+1:n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_max = abs(r1-r2)
+          if(r_min < r_max){cut = min}else{cut = max}
+          break
+        }
       }
-    }
+    }else{message(paste0("length(data)==", length(data)))}
+    
     message("second while loop broken")
     
     m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
