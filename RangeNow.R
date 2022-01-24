@@ -670,9 +670,16 @@ for (idx in 1:nrow(SensorInfoList)) {
   #aa = SensorInfoList[idx,]
   #print("aa is ")
   #print(aa$TABLE_NAME)
-  calResult(data, SensorInfoList[idx,])
-  #print(queryStr)
   
+  if(dim(data)[1]==0){warning(paste0("No data: [TABLE_NAME] = ", SensorInfoList$TABLE_NAME[idx], ", ",
+                                  "[VALUE_COL] = ", SensorInfoList$VALUE_COL[idx], ", ",
+                                  "[SDATE] = ", SensorInfoList$SDATE[idx], ", ",
+                                  "[EDATE] = ", SensorInfoList$EDATE[idx]))
+  }else{
+    calResult(data, SensorInfoList[idx,])
+  }
+  
+  #print(queryStr)
 }
 
 writeLog("Finish RangeNow Process", mainDir_txt)
