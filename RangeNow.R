@@ -442,6 +442,7 @@ changeDetect = function(data, sensorInfo){
       r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
       r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
       if(r1 > r2){max = cut}else{min = cut}
+      message(paste0("(max-min)==", max-min))
       if((max-min)==1){
         c1 = data[1:min]; c2 = data[min+1:n]
         r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
