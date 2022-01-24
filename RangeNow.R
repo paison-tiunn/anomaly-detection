@@ -434,6 +434,7 @@ changeDetect = function(data, sensorInfo){
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
+    message("stop==0")
     min = 1; max = n = length(data)
     while(TRUE){
       cut = sample(min:max, 1)
@@ -454,6 +455,8 @@ changeDetect = function(data, sensorInfo){
         break
       }
     }
+    message("second while loop broken")
+    
     m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
     if(m1 < m2){
       if(max(data[1:cut], na.rm = TRUE) < min(data[cut+1:n], na.rm = TRUE)){
@@ -492,7 +495,10 @@ changeDetect = function(data, sensorInfo){
 #calResult <- function(data,col,sn){
 calResult <- function(data, sensorInfo){  
   
+  message("Start CPD")
   CPD_result = changeDetect(data, sensorInfo)
+  message("Finish CPD")
+  
   data = CPD_result$DATA
   changeFound = CPD_result$CPD
   if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
@@ -508,12 +514,14 @@ calResult <- function(data, sensorInfo){
   #CHECK_LIST = sensorInfo$CHECK_LIST
   
   if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
+    message("Start G")
     gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
     if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
     if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
+    message("Finish G")
   }else{
-    GAMMA_UP = GAMMA_DOWN = "NULL"
+    GAMMA_UP = GAMMA_DOWN = "NULL"; message("G not run")
   }
   
   #if(str_detect(CHECK_LIST, "9")){}
