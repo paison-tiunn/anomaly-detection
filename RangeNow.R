@@ -491,6 +491,7 @@ changeDetect = function(data, sensorInfo){
       data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
     }
   }
+  message(paste0("Possible/suspicious/candidate change points: ", CHANGE_TIM))
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
 }
