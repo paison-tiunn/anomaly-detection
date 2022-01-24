@@ -440,8 +440,8 @@ changeDetect = function(data, sensorInfo){
       while(TRUE){
         cut = sample((min+1):(max-1), 1)
         c1 = data[1:cut]; c2 = data[cut+1:n]
-        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); message(paste0("left range ( ~ ", time[cut],"): ", r1))
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); message(paste0("right range (", time[cut+1]," ~ ): ", r2))
         if(r1 > r2){max = cut}else{min = cut}
         message(paste0("(max-min)==", max-min))
         if((max-min)==1){
