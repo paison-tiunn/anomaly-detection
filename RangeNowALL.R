@@ -609,7 +609,7 @@ calResult <- function(data, sensorInfo){
 
 mainDir_txt = get_mainDir(type = "txt")
 mainDir_Rout = get_mainDir(type = "Rout")
-writeLog("Start RangeNow Process", mainDir_txt)
+writeLog("Start RangeNowALL Process", mainDir_txt)
 
 errorCatch <- file(mainDir_Rout, open = "wt")
 sink(errorCatch, type = "message")
@@ -631,12 +631,11 @@ basicConn <- dbConnect(odbc(),
                        Port = 1433)
 
 #取得需要做計算的儀器
-realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],"
-realtimeQuery = paste0(realtimeQuery, "[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],")
-realtimeQuery = paste0(realtimeQuery, "[DATA_RANGE],[SDATE],[EDATE],[SENSOR_UP],[SENSOR_DOWN],[CHE_P1],[CHE_P2],")
-realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P], [JUMP_P_GAMMA] ")
-realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where AUTO_UPDATE = 1 and update_time > getdate()-0.01 order by update_time desc")
-querySensor <- dbSendQuery(basicConn, realtimeQuery)
+allQuery = "select SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
+allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,[CHE_P1],[CHE_P2],")
+allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
+allQuery = paste0(allQuery, "from V_Sensor_Info where AUTO_UPDATE = 1 and UNIT = '大崩塌' AND [SENSOR_ID] >= 744 ")
+querySensor <- dbSendQuery(basicConn, allQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
 SensorInfoList <- dbFetch(querySensor)
@@ -682,7 +681,7 @@ for (idx in 1:nrow(SensorInfoList)) {
   #print(queryStr)
 }
 
-writeLog("Finish RangeNow Process", mainDir_txt)
+writeLog("Finish RangeNowALL Process", mainDir_txt)
 sink(type = "message")
 close(errorCatch)
 
