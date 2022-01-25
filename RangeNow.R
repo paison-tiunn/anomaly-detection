@@ -434,16 +434,20 @@ changeDetect = function(data, sensorInfo){
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
-    message("stop==0")
     min = 1; max = n = length(data)
+    message(paste0("--> stop==0, length(data)==", n))
+    message(paste0("\n(max-min)==", max-min))
     if(max > min){
       while(TRUE){
-        cut = sample((min+1):(max-1), 1)
+        if((min+1)!=(max-1)){cut = sample((min+1):(max-1), 1)}else{cut = min+1}
+        
         c1 = data[1:cut]; c2 = data[cut+1:n]
-        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); message(paste0("left range ( ~ ", time[cut],"): ", r1))
-        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); message(paste0("right range (", time[cut+1]," ~ ): ", r2))
+        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); #message(paste0("left range ( ~ ", time[cut],"): ", r1))
+        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); #message(paste0("right range (", time[cut+1]," ~ ): ", r2))
         if(r1 > r2){max = cut}else{min = cut}
         message(paste0("(max-min)==", max-min))
+        
+        # check whether to break the while(TRUE) loop
         if((max-min)==1){
           c1 = data[1:min]; c2 = data[min+1:n]
           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
@@ -454,12 +458,12 @@ changeDetect = function(data, sensorInfo){
           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
           r_max = abs(r1-r2)
           if(r_min < r_max){cut = min}else{cut = max}
-          break
+          message("\nBreak the while(TRUE) loop!"); break
         }
       }
     }else{message(paste0("length(data)==", length(data)))}
     
-    message("second while loop broken")
+    message("==> CPD results:")
     
     #p_CPD = .05
     data1 = data[1:cut]; data2 = data[cut+1:n]
@@ -496,8 +500,8 @@ changeDetect = function(data, sensorInfo){
     }
     if(stop==0){
       data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
-    }
-  } # end of the first while
+    }else{message("Break the while(stop==0) loop!")}
+  } # end of the while(stop==0) loop
   
   time = time[cut+1:n]; CANDIDATE_TIME = time[1]
   message(paste0("Possible/suspicious/candidate change points: ", CANDIDATE_TIME))
