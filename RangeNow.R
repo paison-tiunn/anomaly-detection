@@ -429,8 +429,8 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 #========================================================================================
 changeDetect = function(data, sensorInfo){
   DATA = data
-  data = DATA[[sensorInfo$VALUE_COL]]; message(paste0("is.vector(data): ", is.vector(data)))
-  time = DATA[[sensorInfo$TIME_COL]]; message(paste0("is.vector(time): ", is.vector(time)))
+  data = DATA[[sensorInfo$VALUE_COL]]; message(typeof(data)) #message(paste0("is.vector(data): ", is.vector(data)))
+  time = DATA[[sensorInfo$TIME_COL]]; message(typeof(time)) #message(paste0("is.vector(time): ", is.vector(time)))
   CHANGE_TIME = time[1]
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
