@@ -464,9 +464,9 @@ changeDetect = function(data, sensorInfo){
           r_max = abs(r1-r2)
           
           if(r_min < r_max){
-            if(rmin < r_mid){cut = min}else{cut = mid}
+            if(r_min < r_mid){cut = min}else{cut = mid}
           }else{
-            if(rmax < r_mid){cut = max}else{cut = mid}
+            if(r_max < r_mid){cut = max}else{cut = mid}
           }
           message("\nBreak the while(TRUE) loop!"); break
         }
