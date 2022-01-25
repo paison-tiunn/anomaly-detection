@@ -469,6 +469,12 @@ changeDetect = function(data, sensorInfo){
     m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
     
     if(m1 < m2){
+      message(paste0("[LEFT] 1st largest: ", round(sort(data1, TRUE)[1],2), ",\n",
+                     " 2nd largest: ", round(sort(data1, TRUE)[2],2), ",\n",
+                     " 3rd largest: ", round(sort(data1, TRUE)[3],2), ";\n",
+                     "[RIGHT] 1st smallest: ", round(sort(data2)[1],2), ",\n",
+                     " 2nd smallest: ", round(sort(data2)[2],2), ",\n",
+                     " 3rd smallest: ", round(sort(data2)[3],2), "."))
       if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
@@ -480,6 +486,12 @@ changeDetect = function(data, sensorInfo){
         }
       }
     }else{
+      message(paste0("[LEFT] 1st smallest: ", round(sort(data1)[1],2), ",\n",
+                     " 2nd smallest: ", round(sort(data1)[2],2), ",\n",
+                     " 3rd smallest: ", round(sort(data1)[3],2), ";\n",
+                     "[RIGHT] 1st largest: ", round(sort(data2, TRUE)[1],2), ",\n",
+                     " 2nd largest: ", round(sort(data2, TRUE)[2],2), ",\n",
+                     " 3rd largest: ", round(sort(data2, TRUE)[3],2), "."))
       if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
