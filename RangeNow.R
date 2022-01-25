@@ -505,7 +505,10 @@ changeDetect = function(data, sensorInfo){
       }
     }
     if(stop==0){
-      data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
+      message(paste(length(data)))
+      data = data[cut+1:n]
+      message(paste(length(data)))
+      time = time[cut+1:n]; CHANGE_TIME = time[1]
       #message(paste(source, "has a change point:", cut, "\n"))
       message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
     }else{
