@@ -448,6 +448,29 @@ changeDetect = function(data, sensorInfo){
         if(r1 > r2){max = cut+1}else{min = cut}
         message(paste0("(max-min)==", max-min))
         
+        if((max-min)==2){
+          mid = min+1
+          c1 = data[1:min]; c2 = data[(min+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_min = abs(r1-r2)
+          c1 = data[1:mid]; c2 = data[(mid+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_mid = abs(r1-r2)
+          c1 = data[1:max]; c2 = data[(max+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_max = abs(r1-r2)
+          
+          if(r_min < r_max){
+            if(rmin < r_mid){cut = min}else{cut = mid}
+          }else{
+            if(rmax < r_mid){cut = max}else{cut = mid}
+          }
+          message("\nBreak the while(TRUE) loop!"); break
+        }
+        
         # check whether to break the while(TRUE) loop
         if((max-min)==1){
           c1 = data[1:min]; c2 = data[(min+1):n]
