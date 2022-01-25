@@ -429,8 +429,8 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 #========================================================================================
 changeDetect = function(data, sensorInfo){
   DATA = data
-  data = DATA[[sensorInfo$VALUE_COL]]; message(typeof(data)) #message(paste0("is.vector(data): ", is.vector(data)))
-  time = DATA[[sensorInfo$TIME_COL]]; message(typeof(time)) #message(paste0("is.vector(time): ", is.vector(time)))
+  data = DATA[[sensorInfo$VALUE_COL]]; #message(typeof(data)) #message(paste0("is.vector(data): ", is.vector(data)))
+  time = DATA[[sensorInfo$TIME_COL]]; #message(typeof(time)) #message(paste0("is.vector(time): ", is.vector(time)))
   CHANGE_TIME = time[1]
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
@@ -442,7 +442,7 @@ changeDetect = function(data, sensorInfo){
       while(TRUE){
         if((min+1)!=(max-1)){cut = sample((min+1):(max-1), 1)}else{cut = min+1}
         
-        c1 = data[1:cut]; c2 = data[cut+1:n]
+        c1 = data[1:cut]; c2 = data[(cut+1):n]
         r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); #message(paste0("left range ( ~ ", time[cut],"): ", r1))
         r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); #message(paste0("right range (", time[cut+1]," ~ ): ", r2))
         if(r1 > r2){max = cut}else{min = cut}
@@ -450,11 +450,11 @@ changeDetect = function(data, sensorInfo){
         
         # check whether to break the while(TRUE) loop
         if((max-min)==1){
-          c1 = data[1:min]; c2 = data[min+1:n]
+          c1 = data[1:min]; c2 = data[(min+1):n]
           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
           r_min = abs(r1-r2)
-          c1 = data[1:max]; c2 = data[max+1:n]
+          c1 = data[1:max]; c2 = data[(max+1):n]
           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
           r_max = abs(r1-r2)
@@ -466,7 +466,7 @@ changeDetect = function(data, sensorInfo){
     
     message("==> CPD results:")
     
-    data1 = data[1:cut]; data2 = data[cut+1:n]
+    data1 = data[1:cut]; data2 = data[(cut+1):n]
     m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
     
     if(m1 < m2){
@@ -506,9 +506,9 @@ changeDetect = function(data, sensorInfo){
     }
     if(stop==0){
       message(paste(length(data)))
-      data = data[cut+1:n]
+      data = data[(cut+1):n]
       message(paste(length(data)))
-      time = time[cut+1:n]; CHANGE_TIME = time[1]
+      time = time[(cut+1):n]; CHANGE_TIME = time[1]
       #message(paste(source, "has a change point:", cut, "\n"))
       message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
     }else{
@@ -516,7 +516,7 @@ changeDetect = function(data, sensorInfo){
     }
   } # end of the while(stop==0) loop
   
-  time = time[cut+1:n]; CANDIDATE_TIME = time[1]
+  time = time[(cut+1):n]; CANDIDATE_TIME = time[1]
   message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
