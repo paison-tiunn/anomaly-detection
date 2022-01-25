@@ -658,11 +658,9 @@ calResult <- function(data, sensorInfo){
 
 
 mainDir_txt = get_mainDir(type = "txt")
-mainDir_Rout = get_mainDir(type = "Rout")
 writeLog("Start RangeNowALL Process", mainDir_txt)
 
-errorCatch <- file(mainDir_Rout, open = "wt")
-sink(errorCatch, type = "message")
+
 
 
 
@@ -695,7 +693,10 @@ print(nrow(SensorInfoList))
 
 
 for (idx in 1:nrow(SensorInfoList)) {
-  #print(SensorInfoList[2])
+  
+  mainDir_Rout = get_mainDir(type = "Rout")
+  errorCatch <- file(mainDir_Rout, open = "wt")
+  sink(errorCatch, type = "message")
 
   SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
                                 SensorInfoList$DB_NAME[idx],
@@ -713,12 +714,8 @@ for (idx in 1:nrow(SensorInfoList)) {
   print(SensorInfoList$SENSOR_ID_COL[idx])
   query <- dbSendQuery(SensorConnect, queryStr)
   data <- dbFetch(query)
-  #print(nrow(data))
   dbClearResult(query)
-  #calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
-  #aa = SensorInfoList[idx,]
-  #print("aa is ")
-  #print(aa$TABLE_NAME)
+
   
   if(dim(data)[1]==0){message(paste0("No data: [TABLE_NAME] = ", SensorInfoList$TABLE_NAME[idx], ", ",
                                   "[VALUE_COL] = ", SensorInfoList$VALUE_COL[idx], ", ",
@@ -728,12 +725,12 @@ for (idx in 1:nrow(SensorInfoList)) {
     calResult(data, SensorInfoList[idx,])
   }
   
-  #print(queryStr)
+  sink(type = "message")
+  close(errorCatch)
 }
 
 writeLog("Finish RangeNowALL Process", mainDir_txt)
-sink(type = "message")
-close(errorCatch)
+
 
 
 
