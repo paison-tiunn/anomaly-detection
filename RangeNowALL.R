@@ -430,41 +430,77 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 changeDetect = function(data, sensorInfo){
   DATA = data
   data = DATA[[sensorInfo$VALUE_COL]]
-  time = DATA[[sensorInfo$TIME_COL]]; CHANGE_TIME = time[1]
+  time = DATA[[sensorInfo$TIME_COL]]
+  CHANGE_TIME = time[1]
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
-    message("stop==0")
     min = 1; max = n = length(data)
+    message(paste0("--> stop==0, length(data)==", n))
+    message(paste0("\n(max-min)==", max-min))
     if(max > min){
       while(TRUE){
-        cut = sample((min+1):max, 1)
-        c1 = data[1:cut]; c2 = data[cut+1:n]
+        if((min+1)!=(max-1)){cut = sample((min+1):(max-1), 1)}else{cut = min+1}
+        
+        c1 = data[1:cut]; c2 = data[(cut+1):n]
         r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
         r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-        if(r1 > r2){max = cut}else{min = cut}
+        if(r1 > r2){max = cut+1}else{min = cut}
         message(paste0("(max-min)==", max-min))
-        if((max-min)==1){
-          c1 = data[1:min]; c2 = data[min+1:n]
+        
+        # check whether to break the while(TRUE) loop
+        if((max-min)==2){
+          mid = min+1
+          c1 = data[1:min]; c2 = data[(min+1):n]
           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
           r_min = abs(r1-r2)
-          c1 = data[1:max]; c2 = data[max+1:n]
+          c1 = data[1:mid]; c2 = data[(mid+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_mid = abs(r1-r2)
+          c1 = data[1:max]; c2 = data[(max+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_max = abs(r1-r2)
+          
+          if(r_min < r_max){
+            if(r_min < r_mid){cut = min}else{cut = mid}
+          }else{
+            if(r_max < r_mid){cut = max}else{cut = mid}
+          }
+          message("\nBreak the while(TRUE) loop!"); break
+        }
+        
+        # check whether to break the while(TRUE) loop
+        if((max-min)==1){
+          c1 = data[1:min]; c2 = data[(min+1):n]
+          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+          r_min = abs(r1-r2)
+          c1 = data[1:max]; c2 = data[(max+1):n]
           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
           r_max = abs(r1-r2)
           if(r_min < r_max){cut = min}else{cut = max}
-          break
+          message("\nBreak the while(TRUE) loop!"); break
         }
       }
     }else{message(paste0("length(data)==", length(data)))}
     
-    message("second while loop broken")
+    message("==> CPD results:")
     
-    m1 = median(data[1:cut], na.rm = TRUE); m2 = median(data[cut+1:n], na.rm = TRUE)
+    data1 = data[1:cut]; data2 = data[(cut+1):n]
+    m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
+    
     if(m1 < m2){
-      if(max(data[1:cut], na.rm = TRUE) < min(data[cut+1:n], na.rm = TRUE)){
-        message(paste(source, "has a change point:", cut))
+      message(paste0("[LEFT] 1st largest: ", round(sort(data1, TRUE)[1],2), ",\n",
+                     " 2nd largest: ", round(sort(data1, TRUE)[2],2), ",\n",
+                     " 3rd largest: ", round(sort(data1, TRUE)[3],2), ";\n",
+                     "[RIGHT] 1st smallest: ", round(sort(data2)[1],2), ",\n",
+                     " 2nd smallest: ", round(sort(data2)[2],2), ",\n",
+                     " 3rd smallest: ", round(sort(data2)[3],2), ".\n"))
+      if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
         stop = 1
@@ -475,8 +511,13 @@ changeDetect = function(data, sensorInfo){
         }
       }
     }else{
-      if(min(data[1:cut], na.rm = TRUE) > max(data[cut+1:n], na.rm = TRUE)){
-        print(paste(source, "has a change point:", cut))
+      message(paste0("[LEFT] 1st smallest: ", round(sort(data1)[1],2), ",\n",
+                     " 2nd smallest: ", round(sort(data1)[2],2), ",\n",
+                     " 3rd smallest: ", round(sort(data1)[3],2), ";\n",
+                     "[RIGHT] 1st largest: ", round(sort(data2, TRUE)[1],2), ",\n",
+                     " 2nd largest: ", round(sort(data2, TRUE)[2],2), ",\n",
+                     " 3rd largest: ", round(sort(data2, TRUE)[3],2), ".\n"))
+      if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
         stop = 1
@@ -488,9 +529,18 @@ changeDetect = function(data, sensorInfo){
       }
     }
     if(stop==0){
-      data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
+      message(paste(length(data)))
+      data = data[(cut+1):n]
+      message(paste(length(data)))
+      time = time[(cut+1):n]; CHANGE_TIME = time[1]
+      message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
+    }else{
+      message("Break the while(stop==0) loop!")
     }
-  }
+  } # end of the while(stop==0) loop
+  
+  time = time[(cut+1):n]; CANDIDATE_TIME = time[1]
+  message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
 }
@@ -499,9 +549,9 @@ changeDetect = function(data, sensorInfo){
 #calResult <- function(data,col,sn){
 calResult <- function(data, sensorInfo){  
   
-  message("Start CPD")
+  message("===Start CPD===")
   CPD_result = changeDetect(data, sensorInfo)
-  message("Finish CPD")
+  message("===Finish CPD===")
   
   data = CPD_result$DATA
   changeFound = CPD_result$CPD
