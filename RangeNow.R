@@ -429,8 +429,9 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
 #========================================================================================
 changeDetect = function(data, sensorInfo){
   DATA = data
-  data = DATA[[sensorInfo$VALUE_COL]]
-  time = DATA[[sensorInfo$TIME_COL]]; CHANGE_TIME = time[1]
+  data = DATA[[sensorInfo$VALUE_COL]]; message(paste0("is.vector(data): ", is.vector(data)))
+  time = DATA[[sensorInfo$TIME_COL]]; message(paste0("is.vector(time): ", is.vector(time)))
+  CHANGE_TIME = time[1]
   source = "[not defined yet]"
   stop = 0; cut_seq = NULL; CPD = 0
   while(stop==0){
@@ -474,7 +475,7 @@ changeDetect = function(data, sensorInfo){
                      " 3rd largest: ", round(sort(data1, TRUE)[3],2), ";\n",
                      "[RIGHT] 1st smallest: ", round(sort(data2)[1],2), ",\n",
                      " 2nd smallest: ", round(sort(data2)[2],2), ",\n",
-                     " 3rd smallest: ", round(sort(data2)[3],2), "."))
+                     " 3rd smallest: ", round(sort(data2)[3],2), ".\n"))
       if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
@@ -491,7 +492,7 @@ changeDetect = function(data, sensorInfo){
                      " 3rd smallest: ", round(sort(data1)[3],2), ";\n",
                      "[RIGHT] 1st largest: ", round(sort(data2, TRUE)[1],2), ",\n",
                      " 2nd largest: ", round(sort(data2, TRUE)[2],2), ",\n",
-                     " 3rd largest: ", round(sort(data2, TRUE)[3],2), "."))
+                     " 3rd largest: ", round(sort(data2, TRUE)[3],2), ".\n"))
       if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
@@ -506,7 +507,7 @@ changeDetect = function(data, sensorInfo){
     if(stop==0){
       data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
       #message(paste(source, "has a change point:", cut, "\n"))
-      message(paste0("Detected change point: ", CHANGE_TIME))
+      message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
     }else{
       message("Break the while(stop==0) loop!")
     }
@@ -522,9 +523,9 @@ changeDetect = function(data, sensorInfo){
 #calResult <- function(data,col,sn){
 calResult <- function(data, sensorInfo){  
   
-  message("Start CPD")
+  message("===Start CPD===")
   CPD_result = changeDetect(data, sensorInfo)
-  message("Finish CPD")
+  message("===Finish CPD===")
   
   data = CPD_result$DATA
   changeFound = CPD_result$CPD
