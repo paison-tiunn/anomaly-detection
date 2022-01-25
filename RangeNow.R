@@ -465,16 +465,11 @@ changeDetect = function(data, sensorInfo){
     
     message("==> CPD results:")
     
-    #p_CPD = .05
     data1 = data[1:cut]; data2 = data[cut+1:n]
-    #data1_sorted = sort(data1, na.last = NA)
-    #data2_sorted = sort(data2, na.last = NA)
     m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
     
     if(m1 < m2){
       if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
-      #if(data1_sorted[round(length(data1_sorted)*(1-p_CPD))] < data2_sorted[round(length(data2_sorted)*p_CPD)]){
-        message(paste(source, "has a change point:", cut))
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
         stop = 1
@@ -486,8 +481,6 @@ changeDetect = function(data, sensorInfo){
       }
     }else{
       if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
-      #if(data1_sorted[round(length(data1_sorted)*p_CPD)] > data2_sorted[round(length(data2_sorted)*(1-p_CPD))]){
-        print(paste(source, "has a change point:", cut))
         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
       }else{
         stop = 1
@@ -500,11 +493,15 @@ changeDetect = function(data, sensorInfo){
     }
     if(stop==0){
       data = data[cut+1:n]; time = time[cut+1:n]; CHANGE_TIME = time[1]
-    }else{message("Break the while(stop==0) loop!")}
+      #message(paste(source, "has a change point:", cut, "\n"))
+      message(paste0("Detected change point: ", CHANGE_TIME))
+    }else{
+      message("Break the while(stop==0) loop!")
+    }
   } # end of the while(stop==0) loop
   
   time = time[cut+1:n]; CANDIDATE_TIME = time[1]
-  message(paste0("Possible/suspicious/candidate change points: ", CANDIDATE_TIME))
+  message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
 }
