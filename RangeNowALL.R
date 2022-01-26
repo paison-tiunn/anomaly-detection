@@ -730,7 +730,8 @@ for (idx in 1:nrow(SensorInfoList)) {
     
     
   }, error = function(e){
-    errorLog = paste0("There's something wrong with [SN] = ", SensorInfoList$SN[idx], " in [SensorWebAD].[dbo].[Sensor_Info]. Please see ", mainDir_Rout, " for details.")
+    errorLog = paste0("There's something wrong with [SN] = ", SensorInfoList$SN[idx], " in [SensorWebAD].[dbo].[Sensor_Info]. ")
+    errorLog = paste0(errorLog, "Please see ", mainDir_Rout, " for details: ", e)
     writeLog(errorLog, mainDir_txt)
     Sys.sleep(1)
     })
