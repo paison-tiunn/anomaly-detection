@@ -682,7 +682,7 @@ basicConn <- dbConnect(odbc(),
 allQuery = "select SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
 allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,[CHE_P1],[CHE_P2],")
 allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
-allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌'")
+allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌' AND [SN] > 514")
 querySensor <- dbSendQuery(basicConn, allQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
@@ -697,36 +697,42 @@ for (idx in 1:nrow(SensorInfoList)) {
   mainDir_Rout = get_mainDir(type = "Rout")
   errorCatch <- file(mainDir_Rout, open = "wt")
   sink(errorCatch, type = "message")
-
-  SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
-                                SensorInfoList$DB_NAME[idx],
-                                SensorInfoList$USERNAME[idx],
-                                SensorInfoList$PASSWORD[idx])
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
-                           SensorInfoList$TIME_COL[idx],
-                           SensorInfoList$VALUE_COL[idx],
-                           SensorInfoList$SENSOR_ID[idx],
-                           SensorInfoList$SENSOR_ID_COL[idx],
-                           SensorInfoList$SDATE[idx],
-                           SensorInfoList$EDATE[idx])
-  print(queryStr)
-  print(SensorInfoList$SENSOR_ID[idx])
-  print(SensorInfoList$SENSOR_ID_COL[idx])
-  query <- dbSendQuery(SensorConnect, queryStr)
-  data <- dbFetch(query)
-  dbClearResult(query)
-
   
-  if(dim(data)[1]==0){message(paste0("No data: [TABLE_NAME] = ", SensorInfoList$TABLE_NAME[idx], ", ",
-                                  "[VALUE_COL] = ", SensorInfoList$VALUE_COL[idx], ", ",
-                                  "[SDATE] = ", SensorInfoList$SDATE[idx], ", ",
-                                  "[EDATE] = ", SensorInfoList$EDATE[idx]))
-  }else{
-    calResult(data, SensorInfoList[idx,])
-  }
+  tryCatch({
+    
+    SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
+                                  SensorInfoList$DB_NAME[idx],
+                                  SensorInfoList$USERNAME[idx],
+                                  SensorInfoList$PASSWORD[idx])
+    queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
+                             SensorInfoList$TIME_COL[idx],
+                             SensorInfoList$VALUE_COL[idx],
+                             SensorInfoList$SENSOR_ID[idx],
+                             SensorInfoList$SENSOR_ID_COL[idx],
+                             SensorInfoList$SDATE[idx],
+                             SensorInfoList$EDATE[idx])
+    print(queryStr)
+    print(SensorInfoList$SENSOR_ID[idx])
+    print(SensorInfoList$SENSOR_ID_COL[idx])
+    query <- dbSendQuery(SensorConnect, queryStr)
+    data <- dbFetch(query)
+    dbClearResult(query)
+    
+    
+    if(dim(data)[1]==0){message(paste0("No data: [TABLE_NAME] = ", SensorInfoList$TABLE_NAME[idx], ", ",
+                                       "[VALUE_COL] = ", SensorInfoList$VALUE_COL[idx], ", ",
+                                       "[SDATE] = ", SensorInfoList$SDATE[idx], ", ",
+                                       "[EDATE] = ", SensorInfoList$EDATE[idx]))
+    }else{
+      calResult(data, SensorInfoList[idx,])
+    }
+    
+    
+  }, error = function(e){writeLog(paste0("There's something wrong with [SN] = ", SensorInfoList$SN, " in [SensorWebAD].[dbo].[Sensor_Info]. Please see ", mainDir_Rout, " for details."), mainDir_txt)})
   
   sink(type = "message")
   close(errorCatch)
+  
 }
 
 writeLog("Finish RangeNowALL Process", mainDir_txt)
