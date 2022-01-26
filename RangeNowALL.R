@@ -682,7 +682,7 @@ basicConn <- dbConnect(odbc(),
 allQuery = "select SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
 allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,[CHE_P1],[CHE_P2],")
 allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
-allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌' AND [SN] > 514")
+allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌' AND [SN] >= 537")
 querySensor <- dbSendQuery(basicConn, allQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
@@ -729,7 +729,7 @@ for (idx in 1:nrow(SensorInfoList)) {
     
     
   }, error = function(e){
-    errorLog = paste0("There's something wrong with [SN] = ", SensorInfoList$SN, " in [SensorWebAD].[dbo].[Sensor_Info]. Please see ", mainDir_Rout, " for details.")
+    errorLog = paste0("There's something wrong with [SN] = ", SensorInfoList$SN[idx], " in [SensorWebAD].[dbo].[Sensor_Info]. Please see ", mainDir_Rout, " for details.")
     writeLog(errorLog, mainDir_txt)
     Sys.sleep(1)
     })
