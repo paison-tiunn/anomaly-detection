@@ -12,7 +12,7 @@ normal_outlier_range <- function(df, sinfo){
   feat = sinfo$VALUE_FEATURE
   if(feat==4){
     x = x[x!=0]; x = x[x!=1]; x = x[x!=100]
-    x = (x/100) %>% map(~ log(.x/(1-.x)))
+    x = (x/100) %>% map_dbl(~ log(.x/(1-.x)))
   }
   Mean = mean(x); Sd = sd(x)
   if(feat==4){
