@@ -693,7 +693,7 @@ basicConn <- dbConnect(odbc(),
 allQuery = "select SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
 allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,[CHE_P1],[CHE_P2],")
 allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
-allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌' AND [SN] = 537")
+allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌'")
 querySensor <- dbSendQuery(basicConn, allQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
