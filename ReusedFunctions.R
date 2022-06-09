@@ -16,8 +16,8 @@ normal_outlier_range <- function(df, sinfo){
   }
   Mean = mean(x); Sd = sd(x)
   if(feat==4){
-    y = list(lower_bound = (Mean - k*Sd) %>% map_dbl(~ 1/(1+exp(-.x))),
-             upper_bound = (Mean + k*Sd) %>% map_dbl(~ 1/(1+exp(-.x))))
+    y = list(lower_bound = 1/(1+exp(-(Mean - k*Sd)))),
+             upper_bound = 1/(1+exp(-(Mean + k*Sd)))))
   }else{
     y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
   }
