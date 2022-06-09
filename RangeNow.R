@@ -144,71 +144,9 @@ if (!require('odbc', warn.conflicts = FALSE))
 
 
 
-# #================================================================================================
-# # normal_outlier_range(): self-defined function for outlier detection under normal distribution
-# #==============================================================================================
-# normal_outlier_range <- function(df, sinfo){
-#   
-#   #p = .001
-#   if (!is.na(sinfo$NORMAL_P)) {p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
-#   
-#   df %<>% dplyr::summarise(lower_bound = mean(.data[[sinfo$VALUE_COL]]) - k*sd(.data[[sinfo$VALUE_COL]]),
-#                            upper_bound = mean(.data[[sinfo$VALUE_COL]]) + k*sd(.data[[sinfo$VALUE_COL]]))
-#   return(df)
-# }
 
-#=============================================================================
-# param_estim_gamma(): self-defined function for gamma parameter estimation
-#=============================================================================
-param_estim_gamma = function(x){
-  
-  x[which(x==0)] = min(x[which(x!=0)])/2
-  s = log(mean(x)) - mean(log(x)); k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
-  theta = mean(x)/k
-  return(c(k, 1/theta))
-}
 
-#=================================================================================
-# gamma_outlier_range(): self-defined function for outlier detection under gamma
-#==================================================================================
-gamma_outlier_range <- function(df, sinfo){
-  
-  # p = .001
-  #if(!is.null(sinfo)){
-    if (!is.na(sinfo$GAMMA_P)) {p = sinfo$GAMMA_P}
-  #}
-  
-  #x = .data[[sinfo$VALUE_COL]]
-  var_name = sinfo$VALUE_COL; x = df[[var_name]]; negative_data = FALSE
-  if(max(x, na.rm = TRUE) <= 0 & min(x, na.rm = TRUE) <= 0){
-    x = -x; negative_data = TRUE
-  }
-  param = param_estim_gamma(x)
-  
-  lower = FALSE
-  if(!lower){
-    if(!negative_data){
-      df1 = df %>%
-        dplyr::summarise(lower_bound = 0,
-                         upper_bound = qgamma(1-p, param[1], param[2]))
-    }else{
-      df1 = df %>%
-        dplyr::summarise(lower_bound = -qgamma(1-p, param[1], param[2]),
-                         upper_bound = 0)
-    }
-  }else{
-    if(!negative_data){
-      df1 = df %>%
-        dplyr::summarise(lower_bound = qgamma(p/2, param[1], param[2]),
-                         upper_bound = qgamma(1-p/2, param[1], param[2]))
-    }else{
-      df1 = df %>%
-        dplyr::summarise(lower_bound = -qgamma(1-p/2, param[1], param[2]),
-                         upper_bound = -qgamma(p/2, param[1], param[2]))
-    }
-  }
-  return(df1)
-}
+
 
 
 
@@ -579,7 +517,7 @@ calResult <- function(data, sensorInfo){
   
   if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
     message("Start G")
-    gammaResult = gamma_outlier_range(data, sensorInfo)
+    gammaResult = gamma_outlier_range(data, sensorInfo, mode = 1)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
     if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
     if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
