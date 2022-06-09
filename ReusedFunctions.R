@@ -47,33 +47,21 @@ gamma_outlier_range <- function(df, sinfo, mode){
   
   if(mode==1){
     if(!negative_data){
-      df1 = df %>%
-        dplyr::summarise(lower_bound = 0,
-                         upper_bound = qgamma(1-p, param[1], param[2]))
+      df1 = list(lower_bound = 0, upper_bound = qgamma(1-p, param[1], param[2]))
     }else{
-      df1 = df %>%
-        dplyr::summarise(lower_bound = -qgamma(1-p, param[1], param[2]),
-                         upper_bound = 0)
+      df1 = list(lower_bound = -qgamma(1-p, param[1], param[2]), upper_bound = 0)
     }
   }else if(mode==0){
     if(!negative_data){
-      df1 = df %>%
-        dplyr::summarise(lower_bound = qgamma(p/2, param[1], param[2]),
-                         upper_bound = qgamma(1-p/2, param[1], param[2]))
+      df1 = list(lower_bound = qgamma(p/2, param[1], param[2]), upper_bound = qgamma(1-p/2, param[1], param[2]))
     }else{
-      df1 = df %>%
-        dplyr::summarise(lower_bound = -qgamma(1-p/2, param[1], param[2]),
-                         upper_bound = -qgamma(p/2, param[1], param[2]))
+      df1 = list(lower_bound = -qgamma(1-p/2, param[1], param[2]), upper_bound = -qgamma(p/2, param[1], param[2]))
     }
   }else if(mode==-1){
     if(!negative_data){
-      df1 = df %>%
-        dplyr::summarise(lower_bound = qgamma(p, param[1], param[2]),
-                         upper_bound = 999)
+      df1 = list(lower_bound = qgamma(p, param[1], param[2]), upper_bound = 999)
     }else{
-      df1 = df %>%
-        dplyr::summarise(lower_bound = -999,
-                         upper_bound = -qgamma(p, param[1], param[2]))
+      df1 = list(lower_bound = -999, upper_bound = -qgamma(p, param[1], param[2]))
     }
   }
   return(df1)
