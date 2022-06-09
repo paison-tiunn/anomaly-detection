@@ -87,7 +87,7 @@ gamma_jump_upper = function(df, sinfo, diff = 5){
   }
   
   x = Df$ValueDiff
-  param = param_est_gamma(x)
+  param = param_estim_gamma(x)
   y = qgamma(1-p, param[1], param[2])
   return(y)
 }
