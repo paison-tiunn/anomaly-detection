@@ -611,12 +611,19 @@ basicConn <- dbConnect(odbc(),
                        PWD = "wj/3ck6tj4",
                        Port = 1433)
 
-#取得需要做計算的儀器
-allQuery = "select SN,IP,[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
-allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],SDATE,EDATE,SENSOR_DOWN,SENSOR_UP,[CHE_P1],[CHE_P2],")
+allQuery0 = read_file("C:/Project/RangeNowALL_SQL.txt")
+
+#===========================
+# 取得需要做計算的儀器
+#========================
+allQuery = "select [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
+allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],[SDATE],[EDATE],[SENSOR_DOWN],[SENSOR_UP],[CHE_P1],[CHE_P2],")
 allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
-allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1 AND [UNIT] = '大崩塌'")
+allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1")
+allQuery = paste(allQuery, allQuery0, sep = " AND ")
+
 querySensor <- dbSendQuery(basicConn, allQuery)
+
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 
 SensorInfoList <- dbFetch(querySensor)
