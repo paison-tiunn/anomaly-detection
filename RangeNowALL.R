@@ -136,16 +136,18 @@ param_estim_gamma = function(x){
 #==================================================================================
 gamma_outlier_range <- function(df, sinfo){
   
-  # p = .001
-  #if(!is.null(sinfo)){
-    if (!is.na(sinfo$GAMMA_P)) {p = sinfo$GAMMA_P}
-  #}
+  if (!is.na(sinfo$GAMMA_P)){p = sinfo$GAMMA_P}else{print("")}
   
-  #x = .data[[sinfo$VALUE_COL]]
-  var_name = sinfo$VALUE_COL; x = df[[var_name]]; negative_data = FALSE
-  if(max(x, na.rm = TRUE) <= 0 & min(x, na.rm = TRUE) <= 0){
-    x = -x; negative_data = TRUE
-  }
+  #============================
+  # filter out 0s and NAs
+  #==========================
+  x = df[[sinfo$VALUE_COL]]; x = x[x!=0]; x = x[!is.na(x)]
+  
+  #==================================
+  # check if data is all negative
+  #====================================
+  negative_data = FALSE; if(max(x) < 0){x = -x; negative_data = TRUE}
+  
   param = param_estim_gamma(x)
   
   lower = FALSE
