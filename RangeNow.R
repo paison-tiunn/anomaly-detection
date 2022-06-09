@@ -197,8 +197,11 @@ na_median <- function(data, var, sinfo){
     select(.data[[var]]) %>%
     #mutate("ltime" = .data[[sinfo$TIME_COL]]) %>%
     #dplyr::rename(sinfo$TIME_COL="ltime") #%>%
-    mutate("ltime" = data[[as.character(sinfo$TIME_COL)]],"氣象變數"=var,"year"=year(data[[as.character(sinfo$TIME_COL)]]),"month"=month(data[[as.character(sinfo$TIME_COL)]]),
-           "是否遺漏"=ifelse(is.na(data[[var]]),1,0))
+    mutate("ltime" = data[[as.character(sinfo$TIME_COL)]],
+           "氣象變數" = var,
+           "year" = year(data[[as.character(sinfo$TIME_COL)]]),
+           "month" = month(data[[as.character(sinfo$TIME_COL)]]),
+           "是否遺漏" = ifelse(is.na(data[[var]]),1,0))
   #print(da)
   
   m = da %>%
@@ -253,6 +256,7 @@ na_median <- function(data, var, sinfo){
 
 
 
+
 ###補值完算前後差異，使用chebyshev找出跳動最大值 -----------
 #前後差可容忍跳動最大值
 # p1目前取0.1還不錯，p2取0.005
@@ -265,16 +269,16 @@ chebyshev_jumprange_na <- function(df, sinfo, p1 = 0.1, p2){
   #var = as.character(sinfo$SENSOR_NAME)
   
   #print("before na_median")
-  data0=na_median(df,var,sinfo)
+  data0 = na_median(df, var, sinfo)
   #print("data0")
   #print(data0)
   
   #可能讀進來為字串，需轉數字型態
   data0[[var]] <- as.numeric(data0[[var]])
   
-  data=data0 %>%
-    mutate("前時間" = lag(ltime,default=ltime[1]),
-           "前面一個" = lag(data0[[var]],default=data0[[var]][1]),
+  data = data0 %>%
+    mutate("前時間" = lag(ltime, default = ltime[1]),
+           "前面一個" = lag(data0[[var]], default = data0[[var]][1]),
            "前後差" = abs(前面一個 - data0[[var]]))
   
   
@@ -517,6 +521,7 @@ calResult <- function(data, sensorInfo){
   
   
   temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
+  
   #print(temp_outlier$可容忍跳動最大值[1])
   #writeLog(temp_outlier$可容忍跳動最大值[1])
   
@@ -539,26 +544,22 @@ calResult <- function(data, sensorInfo){
   if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
   if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
   
-  if(is.numeric(JUMP_VALUE)){
-    JUMP_VALUE <- round(JUMP_VALUE , 3)
-  }
+  if(is.numeric(JUMP_VALUE)){JUMP_VALUE <- round(JUMP_VALUE , 3)}
   
-  if(is.na(JUMP_VALUE)){
-    JUMP_VALUE <- 0
-  }
+  if(is.na(JUMP_VALUE)){JUMP_VALUE <- 0}
   
   if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
   
-  JUMP_VALUE_GAMMA = "NULL"
+  JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo) %>% round(3)
     
     
   # 資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
-  sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " ,CHE_UP,", [CHE_DOWN] = ",CHE_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " ,BOX_UP,", [BOX_DOWN] = ",BOX_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN,", ")
-  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " ,JUMP_VALUE,", ")
+  sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " , CHE_UP, ", [CHE_DOWN] = ", CHE_DOWN, ", ")
+  sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " , BOX_UP, ", [BOX_DOWN] = ", BOX_DOWN, ", ")
+  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN, ", ")
+  sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN, ", ")
+  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " , JUMP_VALUE,", [JUMP_VALUE_GAMMA] = ", JUMP_VALUE_GAMMA, ", ")
   sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
   sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
   print(sqlr_Update)

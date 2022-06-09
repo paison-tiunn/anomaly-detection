@@ -18,6 +18,7 @@ normal_outlier_range <- function(df, sinfo){
 #=============================================================================
 param_estim_gamma = function(x){
   
+  x = x[x!=0]; x = x[!is.na(x)]
   s = log(mean(x)) - mean(log(x))
   k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
   theta = mean(x)/k
@@ -63,6 +64,32 @@ gamma_outlier_range <- function(df, sinfo, mode){
     }
   }
   return(df1)
+}
+
+gamma_jump_upper = function(df, sinfo, diff = 5){
+  
+  
+  p = sinfo$JUMP_P_GAMMA
+  Df = df[c(sinfo$TIME_COL, sinfo$VALUE_COL)]
+  names(Df) = c("Time", "Value")
+  Df = Df %>% mutate(Time = as.POSIXct(as.character(Time)),
+                     TimeLag = lag(Time),
+                     TimeDiff = Time - TimeDiff,
+                     ValueLag = lag(Value),
+                     ValueDiff = abs(Value - ValueLag))
+  
+  if(units(Df$TimeDiff)=="mins"){
+    Df = Df %>% filter(TimeDiff <= diff)
+  }else if(units(Df$TimeDiff)=="secs"){
+    Df = Df %>% filter(TimeDiff <= diff*60)
+  }else if(units(Df$TimeDiff)=="hours"){
+    Df = Df %>% filter(TimeDiff <= diff/60)
+  }
+  
+  x = Df$ValueDiff
+  param = param_est_gamma(x)
+  y = qgamma(1-p, param[1], param[2])
+  return(y)
 }
 
 #=======================================================================
