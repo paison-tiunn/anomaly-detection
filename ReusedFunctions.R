@@ -8,8 +8,19 @@
 normal_outlier_range <- function(df, sinfo){
   
   if(!is.na(sinfo$NORMAL_P)){p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
-  x = df[[sinfo$VALUE_COL]]; Mean = mean(x); Sd = sd(x)
-  y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
+  x = df[[sinfo$VALUE_COL]]
+  feat = sinfo$VALUE_FEATURE
+  if(feat=="4"){
+    x = x[x!=0]; x = x[x!=1]; x = x[x!=100]
+    x = (x/100) %>% map(~ log(.x/(1-.x)))
+  }
+  Mean = mean(x); Sd = sd(x)
+  if(feat=="4"){
+    y = list(lower_bound = (Mean - k*Sd) %>% map_dbl(~ 1/(1+exp(-.x))),
+             upper_bound = (Mean + k*Sd) %>% map_dbl(~ 1/(1+exp(-.x))))
+  }else{
+    y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
+  }
   return(y)
 }
 

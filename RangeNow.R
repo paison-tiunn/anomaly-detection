@@ -74,11 +74,7 @@ if (!require('scales', warn.conflicts = FALSE))
   library(scales, warn.conflicts = FALSE);
 }
 
-#if (!require('dplyr', warn.conflicts = FALSE)) 
-#{
-#  install.packages('dplyr',repos='https://cran.rstudio.com');
-#  library(dplyr, warn.conflicts = FALSE);
-#}
+
 
 if (!require('reshape', warn.conflicts = FALSE)) 
 {
@@ -87,7 +83,7 @@ if (!require('reshape', warn.conflicts = FALSE))
 }
 
 
-Packages_D <- c("tidyverse","lubridate","magrittr","scales","dplyr")
+Packages_D <- c("tidyverse","lubridate","magrittr","scales","dplyr","purrr")
 sapply(Packages_D, library, character.only = TRUE)
 
 if (!require('dplyr', warn.conflicts = FALSE)) 
