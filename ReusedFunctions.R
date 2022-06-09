@@ -74,7 +74,7 @@ gamma_jump_upper = function(df, sinfo, diff = 5){
   names(Df) = c("Time", "Value")
   Df = Df %>% mutate(Time = as.POSIXct(as.character(Time)),
                      TimeLag = lag(Time),
-                     TimeDiff = Time - TimeDiff,
+                     TimeDiff = Time - TimeLag,
                      ValueLag = lag(Value),
                      ValueDiff = abs(Value - ValueLag))
   
