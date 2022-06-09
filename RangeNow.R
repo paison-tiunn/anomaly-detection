@@ -612,7 +612,7 @@ basicConn <- dbConnect(odbc(),
 realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],"
 realtimeQuery = paste0(realtimeQuery, "[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],")
 realtimeQuery = paste0(realtimeQuery, "[DATA_RANGE],[SDATE],[EDATE],[SENSOR_UP],[SENSOR_DOWN],[CHE_P1],[CHE_P2],")
-realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P], [JUMP_P_GAMMA] ")
+realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA],[VALUE_FEATURE] ")
 realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where AUTO_UPDATE = 1 and update_time > getdate()-0.01 order by update_time desc")
 querySensor <- dbSendQuery(basicConn, realtimeQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
