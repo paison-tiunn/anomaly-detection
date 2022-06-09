@@ -134,7 +134,7 @@ param_estim_gamma = function(x){
 #=================================================================================
 # gamma_outlier_range(): self-defined function for outlier detection under gamma
 #==================================================================================
-gamma_outlier_range <- function(df, sinfo){
+gamma_outlier_range <- function(df, sinfo, mode = -1){
   
   if (!is.na(sinfo$GAMMA_P)){p = sinfo$GAMMA_P}else{print("")}
   
@@ -150,8 +150,7 @@ gamma_outlier_range <- function(df, sinfo){
   
   param = param_estim_gamma(x)
   
-  lower = FALSE
-  if(!lower){
+  if(mode==1){
     if(!negative_data){
       df1 = df %>%
         dplyr::summarise(lower_bound = 0,
@@ -161,7 +160,7 @@ gamma_outlier_range <- function(df, sinfo){
         dplyr::summarise(lower_bound = -qgamma(1-p, param[1], param[2]),
                          upper_bound = 0)
     }
-  }else{
+  }else if(mode==0){
     if(!negative_data){
       df1 = df %>%
         dplyr::summarise(lower_bound = qgamma(p/2, param[1], param[2]),
@@ -170,6 +169,16 @@ gamma_outlier_range <- function(df, sinfo){
       df1 = df %>%
         dplyr::summarise(lower_bound = -qgamma(1-p/2, param[1], param[2]),
                          upper_bound = -qgamma(p/2, param[1], param[2]))
+    }
+  }else if(mode==-1){
+    if(!negative_data){
+      df1 = df %>%
+        dplyr::summarise(lower_bound = qgamma(p, param[1], param[2]),
+                         upper_bound = 999)
+    }else{
+      df1 = df %>%
+        dplyr::summarise(lower_bound = -999,
+                         upper_bound = -qgamma(p, param[1], param[2]))
     }
   }
   return(df1)
@@ -570,14 +579,14 @@ calResult <- function(data, sensorInfo){
   #CHECK_LIST = sensorInfo$CHECK_LIST
   
   if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
-    message("Start G")
+    message("Gamma message: Start G")
     gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
-    if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
-    message("Finish G")
+    if(abs(GAMMA_UP)!=999){GAMMA_UP <- round(GAMMA_UP , 3)}else{GAMMA_UP = "NULL"}
+    if(abs(GAMMA_DOWN)!=999){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}else{GAMMA_DOWN = "NULL"}
+    message("Gamma message: Finish G")
   }else{
-    GAMMA_UP = GAMMA_DOWN = "NULL"; message("G not run")
+    GAMMA_UP = GAMMA_DOWN = "NULL"; message("Gamma message: G not run")
   }
   
   #if(str_detect(CHECK_LIST, "9")){}
