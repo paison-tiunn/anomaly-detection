@@ -8,7 +8,7 @@
 normal_outlier_range <- function(df, sinfo){
   
   if(!is.na(sinfo$NORMAL_P)){p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
-  x = df[[sinfo$VALUE_COL]]; Mean = mean(x); Sd = st(x)
+  x = df[[sinfo$VALUE_COL]]; Mean = mean(x); Sd = sd(x)
   y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
   return(y)
 }
