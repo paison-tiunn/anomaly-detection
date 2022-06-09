@@ -611,7 +611,7 @@ basicConn <- dbConnect(odbc(),
                        PWD = "wj/3ck6tj4",
                        Port = 1433)
 
-allQuery0 = read_file("C:/Project/RangeNowALL_SQL.txt")
+allQuery0 = readr::read_file("C:/Project/RangeNowALL_SQL.txt")
 
 #===========================
 # 取得需要做計算的儀器
