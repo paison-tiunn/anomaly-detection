@@ -502,7 +502,7 @@ calResult <- function(data, sensorInfo){
   
   if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
     message("Gamma message: Start G")
-    gammaResult = gamma_outlier_range(data, sensorInfo)
+    gammaResult = gamma_outlier_range(data, sensorInfo, mode = -1)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
     if(abs(GAMMA_UP)!=999){GAMMA_UP <- round(GAMMA_UP , 3)}else{GAMMA_UP = "NULL"}
     if(abs(GAMMA_DOWN)!=999){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}else{GAMMA_DOWN = "NULL"}
