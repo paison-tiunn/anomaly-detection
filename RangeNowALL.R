@@ -125,8 +125,8 @@ normal_outlier_range <- function(df, sinfo){
 #=============================================================================
 param_estim_gamma = function(x){
   
-  x[which(x==0)] = min(x[which(x!=0)])/2
-  s = log(mean(x)) - mean(log(x)); k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
+  s = log(mean(x)) - mean(log(x))
+  k = (3-s+sqrt((s-3)^2+24*s))/(12*s)
   theta = mean(x)/k
   return(c(k, 1/theta))
 }
