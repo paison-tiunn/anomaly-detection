@@ -294,34 +294,7 @@ chebyshev_jumpdata_na <- function(df, sinfo, var){
 #temp_outlier = chebyshev_jumpdata_na(data.list.WL[[1]],"Temp",0.1,0.005)
 
 
-#=======================================================================
-# get_mainDir(): self-defined function for writeLog() and errorCatch
-#======================================================================
-get_mainDir = function(type){
-  
-  #檢查路徑
-  mainDir <- "C:/Project/log"
-  today <- Sys.time()
-  year <- format(today, format = "%Y")
-  month <- format(today, format = "%m")
-  if(type=="txt"){day <- format(today, format = paste0("%F.", type))}
-  if(type=="Rout"){day <- format(today, format = paste0("%F_%H-%M-%S.", type))}
-  
-  # year
-  mainDir <- paste(mainDir, year, sep = "/", collapse = "/")
-  if(!file.exists(mainDir)){
-    dir.create(file.path(mainDir), showWarnings = FALSE)
-  }
-  
-  # month
-  mainDir <- paste(mainDir, month, sep = "/", collapse = "/")
-  if(!file.exists(mainDir)){
-    dir.create(file.path(mainDir), showWarnings = FALSE)
-  }
-  
-  mainDir <- paste(mainDir, day, sep = "/", collapse = "/")
-  return(mainDir)
-}
+
 
 #===================================================
 # writeLog(): self-defined function for 寫log

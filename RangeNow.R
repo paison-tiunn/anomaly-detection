@@ -10,34 +10,7 @@
 
 #版本: V2_Paison, V1_Keny
 
-#=======================================================================
-# get_mainDir(): self-defined function for writeLog() and errorCatch
-#======================================================================
-get_mainDir = function(type){
-  
-  #檢查路徑
-  mainDir <- "C:/Project/log"
-  today <- Sys.time()
-  year <- format(today, format = "%Y")
-  month <- format(today, format = "%m")
-  if(type=="txt"){day <- format(today, format = paste0("%F.", type))}
-  if(type=="Rout"){day <- format(today, format = paste0("%F_%H-%M-%S.", type))}
-  
-  # year
-  mainDir <- paste(mainDir, year, sep = "/", collapse = "/")
-  if(!file.exists(mainDir)){
-    dir.create(file.path(mainDir), showWarnings = FALSE)
-  }
-  
-  # month
-  mainDir <- paste(mainDir, month, sep = "/", collapse = "/")
-  if(!file.exists(mainDir)){
-    dir.create(file.path(mainDir), showWarnings = FALSE)
-  }
-  
-  mainDir <- paste(mainDir, day, sep = "/", collapse = "/")
-  return(mainDir)
-}
+
 
 #mainDir_Rout0 = get_mainDir(type = "Rout")
 #errorCatch0 <- file(mainDir_Rout0, open = "wt")
