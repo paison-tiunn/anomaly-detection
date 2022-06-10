@@ -619,7 +619,8 @@ querySensor <- dbSendQuery(basicConn, realtimeQuery)
 
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
-print(nrow(SensorInfoList))
+
+#print(nrow(SensorInfoList))
 #print(length(SensorInfoList))
 
 
@@ -637,12 +638,15 @@ for (idx in 1:nrow(SensorInfoList)) {
                            SensorInfoList$SENSOR_ID_COL[idx],
                            SensorInfoList$SDATE[idx],
                            SensorInfoList$EDATE[idx])
-  print(queryStr)
-  print(SensorInfoList$SENSOR_ID[idx])
-  print(SensorInfoList$SENSOR_ID_COL[idx])
+  #print(queryStr)
+  #print(SensorInfoList$SENSOR_ID[idx])
+  #print(SensorInfoList$SENSOR_ID_COL[idx])
+  
   query <- dbSendQuery(SensorConnect, queryStr)
+  
   data <- dbFetch(query)
   #print(nrow(data))
+  
   dbClearResult(query)
   #calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
   #aa = SensorInfoList[idx,]

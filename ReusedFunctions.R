@@ -14,10 +14,12 @@ normal_outlier_range <- function(df, sinfo){
     x = x[x!=0]; x = x[x!=1]; x = x[x!=100]
     x = (x/100) %>% map_dbl(~ log(.x/(1-.x)))
   }
+  message(typeof(x))
+  message(class(x))
   Mean = mean(x); Sd = sd(x)
   if(feat==4){
-    y = list(lower_bound = 1/(1+exp(-(Mean - k*Sd)))),
-             upper_bound = 1/(1+exp(-(Mean + k*Sd)))))
+    y = list(lower_bound = 1/(1+exp(-(Mean - k*Sd))),
+             upper_bound = 1/(1+exp(-(Mean + k*Sd))))
   }else{
     y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
   }
@@ -108,7 +110,7 @@ gamma_jump_upper = function(df, sinfo, diff = 5){
 #======================================================================
 get_mainDir = function(type){
   
-  #檢查路徑
+  #檢查路�??
   mainDir <- "C:/Project/log"
   today <- Sys.time()
   year <- format(today, format = "%Y")
