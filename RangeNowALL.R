@@ -473,12 +473,15 @@ calResult <- function(data, sensorInfo){
   
   #CHECK_LIST = sensorInfo$CHECK_LIST
   
-  if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
+  if(SENSOR_UP <= 0 || SENSOR_DOWN >= 0){
     message("Gamma message: Start G")
-    gammaResult = gamma_outlier_range(data, sensorInfo, mode = -1)
+    #gammaResult = gamma_outlier_range(data, sensorInfo, mode = -1)
+    gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    if(abs(GAMMA_UP)!=999){GAMMA_UP <- round(GAMMA_UP , 3)}else{GAMMA_UP = "NULL"}
-    if(abs(GAMMA_DOWN)!=999){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}else{GAMMA_DOWN = "NULL"}
+    #if(abs(GAMMA_UP)!=999){GAMMA_UP <- round(GAMMA_UP , 3)}else{GAMMA_UP = "NULL"}
+    #if(abs(GAMMA_DOWN)!=999){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}else{GAMMA_DOWN = "NULL"}
+    if(abs(GAMMA_UP) %in% c(0,999)){GAMMA_UP <- "NULL"}else{GAMMA_UP = round(GAMMA_UP , 3)}
+    if(abs(GAMMA_DOWN) %in% c(0,999)){GAMMA_DOWN <- "NULL"}else{GAMMA_DOWN = round(GAMMA_DOWN , 3)}
     message("Gamma message: Finish G")
   }else{
     GAMMA_UP = GAMMA_DOWN = "NULL"; message("Gamma message: G not run")
@@ -574,8 +577,9 @@ writeLog("Start RangeNowALL Process", mainDir_txt)
 
 
 
-
-#資料庫連線
+#=====================
+# 資料庫連線
+#=================================
 basicConn <- dbConnect(odbc(),
                        Driver = "{SQL Server Native Client 11.0}",
                        Server = "59.120.223.165",
@@ -589,10 +593,10 @@ allQuery0 = readr::read_file("C:/Project/RangeNowALL_SQL.txt")
 #===========================
 # 取得需要做計算的儀器
 #========================
-allQuery = "select [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
+allQuery = "SELECT [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],"
 allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],[SDATE],[EDATE],[SENSOR_DOWN],[SENSOR_UP],[CHE_P1],[CHE_P2],")
-allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA] ")
-allQuery = paste0(allQuery, "from V_Sensor_Info WHERE [AUTO_UPDATE] = 1")
+allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA],[MODE] ")
+allQuery = paste0(allQuery, "FROM V_Sensor_Info WHERE [AUTO_UPDATE] = 1")
 allQuery = paste(allQuery, allQuery0, sep = " AND ")
 
 querySensor <- dbSendQuery(basicConn, allQuery)

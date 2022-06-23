@@ -498,15 +498,18 @@ calResult <- function(data, sensorInfo){
   
   #CHECK_LIST = sensorInfo$CHECK_LIST
   
-  if(SENSOR_UP <= 0 | SENSOR_DOWN >= 0){
-    message("Start G")
-    gammaResult = gamma_outlier_range(data, sensorInfo, mode = 1)
+  if(SENSOR_UP <= 0 || SENSOR_DOWN >= 0){
+    message("-->Start Gamma")
+    #gammaResult = gamma_outlier_range(data, sensorInfo, mode = 1)
+    gammaResult = gamma_outlier_range(data, sensorInfo)
     GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
-    if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
-    message("Finish G")
+    #if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
+    #if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
+    if(abs(GAMMA_UP) %in% c(0,999)){GAMMA_UP <- "NULL"}else{GAMMA_UP = round(GAMMA_UP , 3)}
+    if(abs(GAMMA_DOWN) %in% c(0,999)){GAMMA_DOWN <- "NULL"}else{GAMMA_DOWN = round(GAMMA_DOWN , 3)}
+    message("-->Finish Gamma")
   }else{
-    GAMMA_UP = GAMMA_DOWN = "NULL"; message("G not run")
+    GAMMA_UP = GAMMA_DOWN = "NULL"; message("-->Gamma not run")
   }
   
   #if(str_detect(CHECK_LIST, "9")){}
@@ -550,14 +553,14 @@ calResult <- function(data, sensorInfo){
     
     
   # 資料更新回資料庫
-  sqlr_Update <- "UPDATE [dbo].[Sensor_Info] set "
+  sqlr_Update <- "UPDATE [dbo].[Sensor_Info] SET "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " , CHE_UP, ", [CHE_DOWN] = ", CHE_DOWN, ", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " , BOX_UP, ", [BOX_DOWN] = ", BOX_DOWN, ", ")
   sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN, ", ")
   sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN, ", ")
   sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " , JUMP_VALUE,", [JUMP_VALUE_GAMMA] = ", JUMP_VALUE_GAMMA, ", ")
   sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
-  sqlr_Update <- paste(sqlr_Update, " where SN = ", sensorInfo$SN)
+  sqlr_Update <- paste(sqlr_Update, " WHERE [SN] = ", sensorInfo$SN)
   print(sqlr_Update)
   dbGetQuery(basicConn, sqlr_Update)
   
@@ -598,8 +601,9 @@ sink(errorCatch, type = "message")
 
 
 
-
-#資料庫連線
+#=================
+# 資料庫連線
+#====================================
 basicConn <- dbConnect(odbc(),
                        Driver = "{SQL Server Native Client 11.0}",
                        Server = "59.120.223.165",
@@ -608,12 +612,14 @@ basicConn <- dbConnect(odbc(),
                        PWD = "wj/3ck6tj4",
                        Port = 1433)
 
-#取得需要做計算的儀器
+#==========================================
+# 取得需要做計算的儀器
+#========================================================
 realtimeQuery = "select top 1 [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],"
 realtimeQuery = paste0(realtimeQuery, "[TABLE_NAME],[TIME_COL],[VALUE_COL],[SENSOR_ID],[SENSOR_ID_COL],")
 realtimeQuery = paste0(realtimeQuery, "[DATA_RANGE],[SDATE],[EDATE],[SENSOR_UP],[SENSOR_DOWN],[CHE_P1],[CHE_P2],")
-realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA],[VALUE_FEATURE] ")
-realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where AUTO_UPDATE = 1 and update_time > getdate()-0.01 order by update_time desc")
+realtimeQuery = paste0(realtimeQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA],[VALUE_FEATURE],[MODE] ")
+realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where [AUTO_UPDATE] = 1 and [UPDATE_TIME] > getdate()-0.01 order by [UPDATE_TIME] desc")
 querySensor <- dbSendQuery(basicConn, realtimeQuery)
 # select * from V_Sensor_Info where update_time > getdate()-update_FQ
 

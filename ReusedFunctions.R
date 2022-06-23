@@ -44,6 +44,7 @@ param_estim_gamma = function(x){
 gamma_outlier_range <- function(df, sinfo, mode){
   
   if (!is.na(sinfo$GAMMA_P)){p = sinfo$GAMMA_P}else{print("")}
+  MODE = sinfo$MODE
   
   #============================
   # filter out 0s and NAs
@@ -54,6 +55,22 @@ gamma_outlier_range <- function(df, sinfo, mode){
   # check if data is all negative
   #====================================
   negative_data = FALSE; if(max(x) < 0){x = -x; negative_data = TRUE}
+  
+  if(MODE=="a"){
+    mode = 0
+  }else if(MODE=="u"){
+    if(negative_data){
+      mode = -1
+    }else{
+      mode = 1
+    }
+  }else if(MODE=="d"){
+    if(negative_data){
+      mode = 1
+    }else{
+      mode = -1
+    }
+  }
   
   param = param_estim_gamma(x)
   
