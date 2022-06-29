@@ -360,7 +360,9 @@ calResult <- function(data, sensorInfo){
   
   JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo)
   
-  if(is.numeric(JUMP_VALUE_GAMMA)){
+  if(is.na(JUMP_VALUE_GAMMA)){
+    JUMP_VALUE_GAMMA = "NULL"
+  }else if(is.numeric(JUMP_VALUE_GAMMA)){
     JUMP_VALUE_GAMMA = JUMP_VALUE_GAMMA %>% round(3)
   }
   
