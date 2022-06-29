@@ -120,11 +120,11 @@ gamma_jump_upper = function(df, sinfo, diff = 5){
   }
   
   if(nrow(Df)==0){
+    y = "NULL"
+  }else{
     x = Df$ValueDiff
     param = param_estim_gamma(x)
     y = qgamma(1-p, param[1], param[2])
-  }else{
-    y = "NULL"
   }
   
   return(y)
