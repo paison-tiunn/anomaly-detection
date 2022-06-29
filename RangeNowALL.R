@@ -574,7 +574,9 @@ writeLog("Start RangeNowALL Process", mainDir_txt)
 
 
 
-
+mainDir_Rout = get_mainDir(type = "Rout")
+errorCatch <- file(mainDir_Rout, open = "wt")
+sink(errorCatch, type = "message")
 
 
 #=====================
@@ -590,6 +592,7 @@ basicConn <- dbConnect(odbc(),
 
 allQuery0 = readr::read_file("C:/Project/RangeNowALL_SQL.txt")
 
+
 #===========================
 # 取得需要做計算的儀器
 #========================
@@ -597,7 +600,7 @@ allQuery = "SELECT [SN],[IP],[DB_NAME],[USERNAME],[PASSWORD],[TABLE_NAME],[TIME_
 allQuery = paste0(allQuery, "[SENSOR_ID_COL],[DATA_RANGE],[SDATE],[EDATE],[SENSOR_DOWN],[SENSOR_UP],[CHE_P1],[CHE_P2],")
 allQuery = paste0(allQuery, "[JUMP_P1],[JUMP_P2],[NORMAL_P],[GAMMA_P],[JUMP_P_GAMMA],[MODE] ")
 allQuery = paste0(allQuery, "FROM V_Sensor_Info WHERE [AUTO_UPDATE] = 1")
-allQuery = paste(allQuery, allQuery0, sep = " AND ")
+allQuery = enc2native(paste(allQuery, allQuery0, sep = " AND "))
 
 querySensor <- dbSendQuery(basicConn, allQuery)
 
@@ -608,6 +611,9 @@ dbClearResult(querySensor)
 print(nrow(SensorInfoList))
 #print(length(SensorInfoList))
 
+sink(type = "message")
+close(errorCatch)
+Sys.sleep(1)
 
 for (idx in 1:nrow(SensorInfoList)) {
   
