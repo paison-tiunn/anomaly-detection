@@ -116,9 +116,14 @@ gamma_jump_upper = function(df, sinfo, diff = 5){
     Df = Df %>% filter(TimeDiff <= diff/60)
   }
   
-  x = Df$ValueDiff
-  param = param_estim_gamma(x)
-  y = qgamma(1-p, param[1], param[2])
+  if(nrow(Df)==0){
+    x = Df$ValueDiff
+    param = param_estim_gamma(x)
+    y = qgamma(1-p, param[1], param[2])
+  }else{
+    y = "NULL"
+  }
+  
   return(y)
 }
 

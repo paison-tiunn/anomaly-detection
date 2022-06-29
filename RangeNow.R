@@ -549,8 +549,14 @@ calResult <- function(data, sensorInfo){
   
   if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
   
-  JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo) %>% round(3)
-    
+  
+  
+  
+  JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo)
+  
+  if(is.numeric(JUMP_VALUE_GAMMA)){
+    JUMP_VALUE_GAMMA = JUMP_VALUE_GAMMA %>% round(3)
+  }
     
   # 資料更新回資料庫
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] SET "
