@@ -354,244 +354,132 @@ getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate)
   
   sqlStr
 }
-
-#=========================================================================================
-# changeDetect(): self-defined function for change point detection used in calResult()
-#========================================================================================
-changeDetect = function(data, sensorInfo){
-  DATA = data
-  data = DATA[[sensorInfo$VALUE_COL]]; #message(typeof(data)) #message(paste0("is.vector(data): ", is.vector(data)))
-  time = DATA[[sensorInfo$TIME_COL]]; #message(typeof(time)) #message(paste0("is.vector(time): ", is.vector(time)))
-  CHANGE_TIME = time[1]
-  source = "[not defined yet]"
-  stop = 0; cut_seq = NULL; CPD = 0
-  while(stop==0){
-    min = 1; max = n = length(data)
-    message(paste0("--> stop==0, length(data)==", n))
-    message(paste0("\n(max-min)==", max-min))
-    if(max > min){
-      while(TRUE){
-        if((min+1)!=(max-1)){cut = sample((min+1):(max-1), 1)}else{cut = min+1}
-        
-        c1 = data[1:cut]; c2 = data[(cut+1):n]
-        r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); #message(paste0("left range ( ~ ", time[cut],"): ", r1))
-        r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); #message(paste0("right range (", time[cut+1]," ~ ): ", r2))
-        if(r1 > r2){max = cut+1}else{min = cut}
-        message(paste0("(max-min)==", max-min))
-        
-        if((max-min)==2){
-          mid = min+1
-          c1 = data[1:min]; c2 = data[(min+1):n]
-          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-          r_min = abs(r1-r2)
-          c1 = data[1:mid]; c2 = data[(mid+1):n]
-          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-          r_mid = abs(r1-r2)
-          c1 = data[1:max]; c2 = data[(max+1):n]
-          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-          r_max = abs(r1-r2)
-          
-          if(r_min < r_max){
-            if(r_min < r_mid){cut = min}else{cut = mid}
-          }else{
-            if(r_max < r_mid){cut = max}else{cut = mid}
-          }
-          message("\nBreak the while(TRUE) loop!"); break
-        }
-        
-        # check whether to break the while(TRUE) loop
-        if((max-min)==1){
-          c1 = data[1:min]; c2 = data[(min+1):n]
-          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-          r_min = abs(r1-r2)
-          c1 = data[1:max]; c2 = data[(max+1):n]
-          r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
-          r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
-          r_max = abs(r1-r2)
-          if(r_min < r_max){cut = min}else{cut = max}
-          message("\nBreak the while(TRUE) loop!"); break
-        }
-      }
-    }else{message(paste0("length(data)==", length(data)))}
-    
-    message("==> CPD results:")
-    
-    data1 = data[1:cut]; data2 = data[(cut+1):n]
-    m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
-    
-    if(m1 < m2){
-      message(paste0("[LEFT] 1st largest: ", round(sort(data1, TRUE)[1],2), ",\n",
-                     " 2nd largest: ", round(sort(data1, TRUE)[2],2), ",\n",
-                     " 3rd largest: ", round(sort(data1, TRUE)[3],2), ";\n",
-                     "[RIGHT] 1st smallest: ", round(sort(data2)[1],2), ",\n",
-                     " 2nd smallest: ", round(sort(data2)[2],2), ",\n",
-                     " 3rd smallest: ", round(sort(data2)[3],2), ".\n"))
-      if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
-        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
-      }else{
-        stop = 1
-        if(CPD==0){
-          message("No change points are found.")
-        }else{
-          message("All change points are found.")
-        }
-      }
-    }else{
-      message(paste0("[LEFT] 1st smallest: ", round(sort(data1)[1],2), ",\n",
-                     " 2nd smallest: ", round(sort(data1)[2],2), ",\n",
-                     " 3rd smallest: ", round(sort(data1)[3],2), ";\n",
-                     "[RIGHT] 1st largest: ", round(sort(data2, TRUE)[1],2), ",\n",
-                     " 2nd largest: ", round(sort(data2, TRUE)[2],2), ",\n",
-                     " 3rd largest: ", round(sort(data2, TRUE)[3],2), ".\n"))
-      if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
-        stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
-      }else{
-        stop = 1
-        if(CPD==0){
-          message("No change points are found.")
-        }else{
-          message("All change points are found.")
-        }
-      }
-    }
-    if(stop==0){
-      message(paste(length(data)))
-      data = data[(cut+1):n]
-      message(paste(length(data)))
-      time = time[(cut+1):n]; CHANGE_TIME = time[1]
-      #message(paste(source, "has a change point:", cut, "\n"))
-      message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
-    }else{
-      message("Break the while(stop==0) loop!")
-    }
-  } # end of the while(stop==0) loop
-  
-  time = time[(cut+1):n]; CANDIDATE_TIME = time[1]
-  message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
-  DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
-  return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
-}
-
-#計算結果
-#calResult <- function(data,col,sn){
-calResult <- function(data, sensorInfo){  
-  
-  message("===Start CPD===")
-  CPD_result = changeDetect(data, sensorInfo)
-  message("===Finish CPD===")
-  
-  data = CPD_result$DATA
-  changeFound = CPD_result$CPD
-  if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
-  
-  SENSOR_UP = sensorInfo$SENSOR_UP
-  SENSOR_DOWN = sensorInfo$SENSOR_DOWN
-  
-  if (!is.na(SENSOR_DOWN)) {min = SENSOR_DOWN}
-  if (!is.na(SENSOR_UP)) {max = SENSOR_UP}
-  data %<>% filter(between(.data[[sensorInfo$VALUE_COL]], min, max))
-  
-  
-  #CHECK_LIST = sensorInfo$CHECK_LIST
-  
-  if(SENSOR_UP <= 0 || SENSOR_DOWN >= 0){
-    message("-->Start Gamma")
-    #gammaResult = gamma_outlier_range(data, sensorInfo, mode = 1)
-    gammaResult = gamma_outlier_range(data, sensorInfo)
-    GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    #if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
-    #if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
-    if(abs(GAMMA_UP) %in% c(0,999)){GAMMA_UP <- "NULL"}else{GAMMA_UP = round(GAMMA_UP , 3)}
-    if(abs(GAMMA_DOWN) %in% c(0,999)){GAMMA_DOWN <- "NULL"}else{GAMMA_DOWN = round(GAMMA_DOWN , 3)}
-    message("-->Finish Gamma")
-  }else{
-    GAMMA_UP = GAMMA_DOWN = "NULL"; message("-->Gamma not run")
-  }
-  
-  #if(str_detect(CHECK_LIST, "9")){}
-  
-  normalResult <- normal_outlier_range(data, sensorInfo)
-  IQRResult <-  IQRoutlier_range(data,sensorInfo)
-  chebyshevResult <- chebyshev_range(data,sensorInfo)
-  
-  
-  temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
-  
-  #print(temp_outlier$可容忍跳動最大值[1])
-  #writeLog(temp_outlier$可容忍跳動最大值[1])
-  
-  CHE_UP <- chebyshevResult$ODV_U; CHE_DOWN <- chebyshevResult$ODV_L
-  BOX_UP <- IQRResult$upper_bound; BOX_DOWN <- IQRResult$lower_bound
-  
-  #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
-  NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
-  
-  
-  #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
-  JUMP_VALUE <- temp_outlier$ODV_U
-  
-  if(is.numeric(CHE_UP)){CHE_UP <- round(CHE_UP , 3)}
-  if(is.numeric(CHE_DOWN)){CHE_DOWN <- round(CHE_DOWN , 3)}
-  
-  if(is.numeric(BOX_UP)){BOX_UP <- round(BOX_UP , 3)}
-  if(is.numeric(BOX_DOWN)){BOX_DOWN <- round(BOX_DOWN , 3)}
-  
-  if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
-  if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
-  
-  if(is.numeric(JUMP_VALUE)){JUMP_VALUE <- round(JUMP_VALUE , 3)}
-  
-  if(is.na(JUMP_VALUE)){JUMP_VALUE <- 0}
-  
-  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
-  
-  
-  
-  
-  JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo)
-  
-  if(is.numeric(JUMP_VALUE_GAMMA)){
-    JUMP_VALUE_GAMMA = JUMP_VALUE_GAMMA %>% round(3)
-  }
-    
-  # 資料更新回資料庫
-  sqlr_Update <- "UPDATE [dbo].[Sensor_Info] SET "
-  sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " , CHE_UP, ", [CHE_DOWN] = ", CHE_DOWN, ", ")
-  sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " , BOX_UP, ", [BOX_DOWN] = ", BOX_DOWN, ", ")
-  sqlr_Update <- paste(sqlr_Update, "[NORMAL_UP] = " , NORMAL_UP,", [NORMAL_DOWN] = ", NORMAL_DOWN, ", ")
-  sqlr_Update <- paste(sqlr_Update, "[GAMMA_UP] = " , GAMMA_UP,", [GAMMA_DOWN] = ", GAMMA_DOWN, ", ")
-  sqlr_Update <- paste(sqlr_Update, "[JUMP_VALUE] = " , JUMP_VALUE,", [JUMP_VALUE_GAMMA] = ", JUMP_VALUE_GAMMA, ", ")
-  sqlr_Update <- paste(sqlr_Update, "[CHANGE_TIME] = ", CHANGE_TIME)
-  sqlr_Update <- paste(sqlr_Update, " WHERE [SN] = ", sensorInfo$SN)
-  print(sqlr_Update)
-  dbGetQuery(basicConn, sqlr_Update)
-  
-  sqlr_Insert <- "INSERT INTO [dbo].[STAT_HISTORY]([CALCUlATE_TIME],[DATA_RANGE],[SENSOR_UP],[SENSOR_DOWN],"
-  sqlr_Insert <- paste0(sqlr_Insert, "[CHE_UP],[CHE_DOWN],[CHE_P1],[CHE_P2],")
-  sqlr_Insert <- paste0(sqlr_Insert, "[BOX_UP],[BOX_DOWN],[NORMAL_UP],[NORMAL_DOWN],[NORMAL_P],")
-  sqlr_Insert <- paste0(sqlr_Insert, "[GAMMA_UP],[GAMMA_DOWN],[GAMMA_P],[JUMP_VALUE],[JUMP_P1],[JUMP_P2],")
-  sqlr_Insert <- paste0(sqlr_Insert, "[JUMP_VALUE_GAMMA],[JUMP_P_GAMMA],[CHANGE_TIME],[SN],[TIMESTAMP]) Values ('")
-  sqlr_Insert <- paste0(sqlr_Insert, sensorInfo$EDATE, "', ", sensorInfo$DATA_RANGE, ", ", sensorInfo$SENSOR_UP, ", ", sensorInfo$SENSOR_DOWN, ", ")
-  sqlr_Insert <- paste0(sqlr_Insert, CHE_UP, ", ", CHE_DOWN, ", ", sensorInfo$CHE_P1, ", ", sensorInfo$CHE_P2, ", ")
-  sqlr_Insert <- paste0(sqlr_Insert, BOX_UP, ", ", BOX_DOWN, ", ", NORMAL_UP, ", ", NORMAL_DOWN, ", ", sensorInfo$NORMAL_P, ", ")
-  sqlr_Insert <- paste0(sqlr_Insert, GAMMA_UP, ", ", GAMMA_DOWN, ", ", sensorInfo$GAMMA_P, ", ")
-  sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE, ", ", sensorInfo$JUMP_P1, ", ", sensorInfo$JUMP_P2, ", ")
-  sqlr_Insert <- paste0(sqlr_Insert, JUMP_VALUE_GAMMA, ", ", sensorInfo$JUMP_P_GAMMA, ", ", CHANGE_TIME, ", ", sensorInfo$SN, ", getdate())")
-  print(sqlr_Insert)
-  dbGetQuery(basicConn, sqlr_Insert)
-}
+# 
+# #=========================================================================================
+# # changeDetect(): self-defined function for change point detection used in calResult()
+# #========================================================================================
+# changeDetect = function(data, sensorInfo){
+#   DATA = data
+#   data = DATA[[sensorInfo$VALUE_COL]]; #message(typeof(data)) #message(paste0("is.vector(data): ", is.vector(data)))
+#   time = DATA[[sensorInfo$TIME_COL]]; #message(typeof(time)) #message(paste0("is.vector(time): ", is.vector(time)))
+#   CHANGE_TIME = time[1]
+#   source = "[not defined yet]"
+#   stop = 0; cut_seq = NULL; CPD = 0
+#   while(stop==0){
+#     min = 1; max = n = length(data)
+#     message(paste0("--> stop==0, length(data)==", n))
+#     message(paste0("\n(max-min)==", max-min))
+#     if(max > min){
+#       while(TRUE){
+#         if((min+1)!=(max-1)){cut = sample((min+1):(max-1), 1)}else{cut = min+1}
+#         
+#         c1 = data[1:cut]; c2 = data[(cut+1):n]
+#         r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE); #message(paste0("left range ( ~ ", time[cut],"): ", r1))
+#         r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE); #message(paste0("right range (", time[cut+1]," ~ ): ", r2))
+#         if(r1 > r2){max = cut+1}else{min = cut}
+#         message(paste0("(max-min)==", max-min))
+#         
+#         if((max-min)==2){
+#           mid = min+1
+#           c1 = data[1:min]; c2 = data[(min+1):n]
+#           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+#           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+#           r_min = abs(r1-r2)
+#           c1 = data[1:mid]; c2 = data[(mid+1):n]
+#           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+#           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+#           r_mid = abs(r1-r2)
+#           c1 = data[1:max]; c2 = data[(max+1):n]
+#           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+#           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+#           r_max = abs(r1-r2)
+#           
+#           if(r_min < r_max){
+#             if(r_min < r_mid){cut = min}else{cut = mid}
+#           }else{
+#             if(r_max < r_mid){cut = max}else{cut = mid}
+#           }
+#           message("\nBreak the while(TRUE) loop!"); break
+#         }
+#         
+#         # check whether to break the while(TRUE) loop
+#         if((max-min)==1){
+#           c1 = data[1:min]; c2 = data[(min+1):n]
+#           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+#           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+#           r_min = abs(r1-r2)
+#           c1 = data[1:max]; c2 = data[(max+1):n]
+#           r1 = max(c1, na.rm = TRUE)-min(c1, na.rm = TRUE)
+#           r2 = max(c2, na.rm = TRUE)-min(c2, na.rm = TRUE)
+#           r_max = abs(r1-r2)
+#           if(r_min < r_max){cut = min}else{cut = max}
+#           message("\nBreak the while(TRUE) loop!"); break
+#         }
+#       }
+#     }else{message(paste0("length(data)==", length(data)))}
+#     
+#     message("==> CPD results:")
+#     
+#     data1 = data[1:cut]; data2 = data[(cut+1):n]
+#     m1 = median(data1, na.rm = TRUE); m2 = median(data2, na.rm = TRUE)
+#     
+#     if(m1 < m2){
+#       message(paste0("[LEFT] 1st largest: ", round(sort(data1, TRUE)[1],2), ",\n",
+#                      " 2nd largest: ", round(sort(data1, TRUE)[2],2), ",\n",
+#                      " 3rd largest: ", round(sort(data1, TRUE)[3],2), ";\n",
+#                      "[RIGHT] 1st smallest: ", round(sort(data2)[1],2), ",\n",
+#                      " 2nd smallest: ", round(sort(data2)[2],2), ",\n",
+#                      " 3rd smallest: ", round(sort(data2)[3],2), ".\n"))
+#       if(max(data1, na.rm = TRUE) < min(data2, na.rm = TRUE)){
+#         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+#       }else{
+#         stop = 1
+#         if(CPD==0){
+#           message("No change points are found.")
+#         }else{
+#           message("All change points are found.")
+#         }
+#       }
+#     }else{
+#       message(paste0("[LEFT] 1st smallest: ", round(sort(data1)[1],2), ",\n",
+#                      " 2nd smallest: ", round(sort(data1)[2],2), ",\n",
+#                      " 3rd smallest: ", round(sort(data1)[3],2), ";\n",
+#                      "[RIGHT] 1st largest: ", round(sort(data2, TRUE)[1],2), ",\n",
+#                      " 2nd largest: ", round(sort(data2, TRUE)[2],2), ",\n",
+#                      " 3rd largest: ", round(sort(data2, TRUE)[3],2), ".\n"))
+#       if(min(data1, na.rm = TRUE) > max(data2, na.rm = TRUE)){
+#         stop = 0; cut_seq = c(cut_seq, cut); CPD = 1
+#       }else{
+#         stop = 1
+#         if(CPD==0){
+#           message("No change points are found.")
+#         }else{
+#           message("All change points are found.")
+#         }
+#       }
+#     }
+#     if(stop==0){
+#       message(paste(length(data)))
+#       data = data[(cut+1):n]
+#       message(paste(length(data)))
+#       time = time[(cut+1):n]; CHANGE_TIME = time[1]
+#       #message(paste(source, "has a change point:", cut, "\n"))
+#       message(paste0("Detected change point: ", CHANGE_TIME, "\n"))
+#     }else{
+#       message("Break the while(stop==0) loop!")
+#     }
+#   } # end of the while(stop==0) loop
+#   
+#   time = time[(cut+1):n]; CANDIDATE_TIME = time[1]
+#   message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
+#   DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
+#   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
+# }
 
 
 
-#步驟
-#1.先取出資料集
-#2.算出最大最小值
-#3.計算結果
-#4.儲存結果
+
+
 
 
 mainDir_txt = get_mainDir(type = "txt")
