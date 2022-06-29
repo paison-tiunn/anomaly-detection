@@ -306,13 +306,11 @@ calResult <- function(data, sensorInfo){
   
   if(SENSOR_UP <= 0 || SENSOR_DOWN >= 0){
     message("-->Start Gamma")
-    #gammaResult = gamma_outlier_range(data, sensorInfo, mode = 1)
     gammaResult = gamma_outlier_range(data, sensorInfo)
-    GAMMA_UP = gammaResult$upper_bound; GAMMA_DOWN = gammaResult$lower_bound
-    #if(is.numeric(GAMMA_UP)){GAMMA_UP <- round(GAMMA_UP , 3)}
-    #if(is.numeric(GAMMA_DOWN)){GAMMA_DOWN <- round(GAMMA_DOWN , 3)}
-    if(abs(GAMMA_UP) %in% c(0,999)){GAMMA_UP <- "NULL"}else{GAMMA_UP = round(GAMMA_UP , 3)}
-    if(abs(GAMMA_DOWN) %in% c(0,999)){GAMMA_DOWN <- "NULL"}else{GAMMA_DOWN = round(GAMMA_DOWN , 3)}
+    GAMMA_UP = gammaResult$upper_bound
+    GAMMA_DOWN = gammaResult$lower_bound
+    if(is.na(GAMMA_UP) || abs(GAMMA_UP) %in% c(0,999)){GAMMA_UP = "NULL"}else{GAMMA_UP = round(GAMMA_UP , 3)}
+    if(is.na(GAMMA_DOWN) || abs(GAMMA_DOWN) %in% c(0,999)){GAMMA_DOWN = "NULL"}else{GAMMA_DOWN = round(GAMMA_DOWN , 3)}
     message("-->Finish Gamma")
   }else{
     GAMMA_UP = GAMMA_DOWN = "NULL"; message("-->Gamma not run")
