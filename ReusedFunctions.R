@@ -10,18 +10,29 @@ normal_outlier_range <- function(df, sinfo){
   if(!is.na(sinfo$NORMAL_P)){p = sinfo$NORMAL_P}; k = qnorm(1-p/2)
   x = df[[sinfo$VALUE_COL]]
   feat = sinfo$VALUE_FEATURE
+  Max = sinfo$SENSOR_UP
+  Min = sinfo$SENSOR_DOWN
   if(feat==4){
-    x = x[x!=0]; x = x[x!=1]; x = x[x!=100]
-    x = (x/100) %>% map_dbl(~ log(.x/(1-.x)))
+    x = x[x!=0]
+    if(Max==100 && Min==0){
+      CASE_TYPE = "[0, 100]"; x = x[x!=100]; x = (x/100)
+    }else if(Max==1 && Min==0){
+      CASE_TYPE = "[0, 1]"; x = x[x!=1]
+    }else{
+      stop("[SENSOR_UP, SENSOR_DOWN] needs to be [0, 100] or [0, 1] when VALUE_FEATURE = 4.")
+    }
+    x = x %>% map_dbl(~ log(.x/(1-.x)))
   }
-  message(typeof(x))
-  message(class(x))
   Mean = mean(x); Sd = sd(x)
   if(feat==4){
-    y = list(lower_bound = 1/(1+exp(-(Mean - k*Sd)))*100,
-             upper_bound = 1/(1+exp(-(Mean + k*Sd)))*100)
+    y = list(lower_bound = 1/(1+exp(-(Mean - k*Sd))),
+             upper_bound = 1/(1+exp(-(Mean + k*Sd))))
+    if(CASE_TYPE=="[0, 100]"){
+      y = y %>% map(~ .x*100)
+    }
   }else{
-    y = list(lower_bound = Mean - k*Sd, upper_bound = Mean + k*Sd)
+    y = list(lower_bound = Mean - k*Sd,
+             upper_bound = Mean + k*Sd)
   }
   return(y)
 }
