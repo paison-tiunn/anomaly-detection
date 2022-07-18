@@ -286,35 +286,40 @@ changeDetect = function(data, sensorInfo){
   
   time = time[(cut+1):n]; CANDIDATE_TIME = time[1]
   message(paste0("Possible/suspicious/candidate change point: ", CANDIDATE_TIME))
-  DATA %<>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
+  DATA = DATA %>% filter(.data[[sensorInfo$TIME_COL]] >= CHANGE_TIME)
   return(list("DATA" = DATA, "CPD" = CPD, "CHANGE_TIME" = CHANGE_TIME))
 }
 
 
 
 #================================================
-# calResult()
+# calResult(): 
 #============================================
 calResult <- function(data, sensorInfo){  
   
+  #=====================================================
+  # 首先呼叫 changeDetect() 進行改變點偵測
+  #==================================================
   message("===Start CPD===")
   CPD_result = changeDetect(data, sensorInfo)
   message("===Finish CPD===")
-  
   data = CPD_result$DATA
   changeFound = CPD_result$CPD
   if(changeFound==0){CHANGE_TIME = NULL}else{CHANGE_TIME = CPD_result$CHANGE_TIME}
+  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
   
+  #================================================
+  # 將超過 [儀器合理範圍值] 之資料剔除
+  #=============================================
   SENSOR_UP = sensorInfo$SENSOR_UP
   SENSOR_DOWN = sensorInfo$SENSOR_DOWN
-  
   if (!is.na(SENSOR_DOWN)) {min = SENSOR_DOWN}
   if (!is.na(SENSOR_UP)) {max = SENSOR_UP}
   data = data %>% filter(between(.data[[sensorInfo$VALUE_COL]], min, max))
   
-  
-  #CHECK_LIST = sensorInfo$CHECK_LIST
-  
+  #===================================================
+  # 呼叫 gamma_outlier_range() 進行合理值域(Gamma)之估計
+  #==============================================
   if(SENSOR_UP <= 0 || SENSOR_DOWN >= 0){
     message("-->Start Gamma")
     gammaResult = gamma_outlier_range(data, sensorInfo)
@@ -327,57 +332,54 @@ calResult <- function(data, sensorInfo){
     GAMMA_UP = GAMMA_DOWN = "NULL"; message("-->Gamma not run")
   }
   
-  #if(str_detect(CHECK_LIST, "9")){}
-  
+  #============================================================
+  # 呼叫 normal_outlier_range() 進行合理值域(常態)之估計
+  #=============================================================
   normalResult <- normal_outlier_range(data, sensorInfo)
-  IQRResult <-  IQRoutlier_range(data, sensorInfo)
-  chebyshevResult <- chebyshev_range(data, sensorInfo)
-  
-  
-  temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
-  
-  #print(temp_outlier$可容忍跳動最大值[1])
-  #writeLog(temp_outlier$可容忍跳動最大值[1])
-  
-  CHE_UP <- chebyshevResult$ODV_U; CHE_DOWN <- chebyshevResult$ODV_L
-  BOX_UP <- IQRResult$upper_bound; BOX_DOWN <- IQRResult$lower_bound
-  
-  #NORMAL_UP <- sigma3Result$upper_bound; NORMAL_DOWN <- sigma3Result$lower_bound
-  NORMAL_UP <- normalResult$upper_bound; NORMAL_DOWN <- normalResult$lower_bound
-  
-  
-  #JUMP_VALUE <- temp_outlier$可容忍跳動最大值[1]
-  JUMP_VALUE <- temp_outlier$ODV_U
-  
-  if(is.numeric(CHE_UP)){CHE_UP <- round(CHE_UP , 3)}
-  if(is.numeric(CHE_DOWN)){CHE_DOWN <- round(CHE_DOWN , 3)}
-  
-  if(is.numeric(BOX_UP)){BOX_UP <- round(BOX_UP , 3)}
-  if(is.numeric(BOX_DOWN)){BOX_DOWN <- round(BOX_DOWN , 3)}
-  
+  NORMAL_UP <- normalResult$upper_bound
+  NORMAL_DOWN <- normalResult$lower_bound
   if(is.numeric(NORMAL_UP)){NORMAL_UP <- round(NORMAL_UP , 3)}
   if(is.numeric(NORMAL_DOWN)){NORMAL_DOWN <- round(NORMAL_DOWN , 3)}
   
-  if(is.numeric(JUMP_VALUE)){JUMP_VALUE <- round(JUMP_VALUE , 3)}
+  #============================================================
+  # 呼叫 IQRoutlier_range() 進行合理值域(IQR)之估計
+  #=============================================================
+  IQRResult <-  IQRoutlier_range(data, sensorInfo)
+  BOX_UP <- IQRResult$upper_bound
+  BOX_DOWN <- IQRResult$lower_bound
+  if(is.numeric(BOX_UP)){BOX_UP <- round(BOX_UP , 3)}
+  if(is.numeric(BOX_DOWN)){BOX_DOWN <- round(BOX_DOWN , 3)}
   
+  #============================================================
+  # 呼叫 chebyshev_range() 進行合理值域(Chebyshev)之估計
+  #=============================================================
+  chebyshevResult <- chebyshev_range(data, sensorInfo)
+  CHE_UP <- chebyshevResult$ODV_U
+  CHE_DOWN <- chebyshevResult$ODV_L
+  if(is.numeric(CHE_UP)){CHE_UP <- round(CHE_UP , 3)}
+  if(is.numeric(CHE_DOWN)){CHE_DOWN <- round(CHE_DOWN , 3)}
+  
+  #======================================================================
+  # 呼叫 chebyshev_jumpdata_na() 進行前後跳動(chebyshev)門檻值之估計
+  #===============================================================================
+  temp_outlier = chebyshev_jumpdata_na(data,sensorInfo,sensorInfo$VALUE_COL)
+  JUMP_VALUE <- temp_outlier$ODV_U
+  if(is.numeric(JUMP_VALUE)){JUMP_VALUE <- round(JUMP_VALUE , 3)}
   if(is.na(JUMP_VALUE)){JUMP_VALUE <- 0}
   
-  if(is.null(CHANGE_TIME)){CHANGE_TIME = "NULL"}else{CHANGE_TIME = paste0("'",CHANGE_TIME,"'")}
-  
-  
-  
-  
+  #=================================================================
+  # 呼叫 gamma_jump_upper() 進行前後跳動(Gamma)門檻值之估計
+  #=============================================================
   JUMP_VALUE_GAMMA = gamma_jump_upper(data, sensorInfo)
-  
   if(is.na(JUMP_VALUE_GAMMA)){
     JUMP_VALUE_GAMMA = "NULL"
   }else if(is.numeric(JUMP_VALUE_GAMMA)){
     JUMP_VALUE_GAMMA = JUMP_VALUE_GAMMA %>% round(3)
   }
   
-  #=====================
-  # 資料更新回資料庫
-  #=============================
+  #==================================================
+  # 更新資料表 Sensor_Info
+  #=================================================
   sqlr_Update <- "UPDATE [dbo].[Sensor_Info] SET "
   sqlr_Update <- paste(sqlr_Update, "[CHE_UP] = " , CHE_UP, ", [CHE_DOWN] = ", CHE_DOWN, ", ")
   sqlr_Update <- paste(sqlr_Update, "[BOX_UP] = " , BOX_UP, ", [BOX_DOWN] = ", BOX_DOWN, ", ")
@@ -388,6 +390,9 @@ calResult <- function(data, sensorInfo){
   sqlr_Update <- paste(sqlr_Update, " WHERE [SN] = ", sensorInfo$SN)
   dbGetQuery(basicConn, sqlr_Update)
   
+  #==================================================
+  # 新增一筆資料到 STAT_HISTORY 資料表作為歷程記錄
+  #==========================================================
   sqlr_Insert <- "INSERT INTO [dbo].[STAT_HISTORY]([CALCUlATE_TIME],[DATA_RANGE],[SENSOR_UP],[SENSOR_DOWN],"
   sqlr_Insert <- paste0(sqlr_Insert, "[CHE_UP],[CHE_DOWN],[CHE_P1],[CHE_P2],")
   sqlr_Insert <- paste0(sqlr_Insert, "[BOX_UP],[BOX_DOWN],[NORMAL_UP],[NORMAL_DOWN],[NORMAL_P],")
