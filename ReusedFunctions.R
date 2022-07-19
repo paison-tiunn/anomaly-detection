@@ -3,7 +3,7 @@
 
 
 #================================================================================================
-# normal_outlier_range(): self-defined function for outlier detection under normal distribution
+# 瞶办(盽篈)
 #==============================================================================================
 normal_outlier_range <- function(df, sinfo){
   
@@ -50,7 +50,7 @@ param_estim_gamma = function(x){
 }
 
 #=================================================================================
-# gamma_outlier_range(): self-defined function for outlier detection under gamma
+# 瞶办(Gamma)
 #==================================================================================
 gamma_outlier_range <- function(df, sinfo, mode){
   
@@ -108,7 +108,7 @@ gamma_outlier_range <- function(df, sinfo, mode){
 }
 
 #========================================================
-# gamma_jump_upper()
+# 玡铬笆(Gamma)
 #====================================================
 gamma_jump_upper = function(df, sinfo, diff = 5){
   
@@ -170,7 +170,7 @@ get_mainDir = function(type){
 }
 
 #=========================================================================================
-# changeDetect(): self-defined function for change point detection used in calResult()
+# э跑翴盎代
 #========================================================================================
 changeDetect = function(data, sensorInfo){
   DATA = data
@@ -302,8 +302,33 @@ getSensorSQL <- function(tbName, time_Col, value_col, sensorID, sid_Col, sdate, 
   return(sqlStr)
 }
 
+#=======================
+# 砞﹚戈畐硈絬
 #================================================
-# 
+setDBConnect <- function(ip,db,user,pwd){
+  conn <- dbConnect(odbc(),
+                    Driver = "{SQL Server Native Client 11.0}",
+                    Server = ip,
+                    Database = db,
+                    UID = user,
+                    PWD = pwd,
+                    Port = 1433)
+  conn
+}
+
+#===================================================
+# writeLog(): self-defined function for log writing
+#====================================================
+writeLog <- function(msg, mainDir){
+  
+  fileConn <- file(mainDir)
+  logMsg <- paste(format(Sys.time(), "%F %R :"), msg, sep = " ")
+  write(logMsg, file = mainDir, append = TRUE)
+  close(fileConn)
+}
+
+#================================================
+# 程璶ぇ笲衡ㄧ计
 #============================================
 calResult <- function(data, sensorInfo, AutoTriggered = FALSE){  
   
@@ -442,3 +467,163 @@ calResult <- function(data, sensorInfo, AutoTriggered = FALSE){
 }
 
 
+#=====================================================
+# 瞶办(IQR)
+#==============================================
+IQRoutlier_range <- function(df, sinfo){
+  
+  df1 = df %>%
+    dplyr::summarise(lower_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.25)-1.5*IQR(.data[[sinfo$VALUE_COL]]),
+                     upper_bound=quantile(.data[[sinfo$VALUE_COL]],probs = 0.75)+1.5*IQR(.data[[sinfo$VALUE_COL]]))
+  return(df1)
+}
+
+#=========================================================
+# 玡铬笆(Chebyshev)ぇ璶ㄧ计 by Tina
+#=====================================================
+chebyshev_jumpdata_na <- function(df, sinfo, var){
+  
+  # 箇砞砞﹚
+  p1 = 0.1; p2 = 0.05
+  
+  if (!is.na(sinfo$JUMP_P1)) {p1 = sinfo$JUMP_P1}
+  if (!is.na(sinfo$JUMP_P2)) {p2 = sinfo$JUMP_P2}
+  
+  ODV_LU = chebyshev_jumprange_na(df, sinfo, p1, p2)
+  
+  return(ODV_LU)
+}
+
+#=============================================
+# 玡铬笆(Chebyshev)ぇ闽ㄧ计 by Tina
+#==============================================
+chebyshev_jumprange_na <- function(df, sinfo, p1 = 0.1, p2){
+  
+  var = as.character(sinfo$VALUE_COL)
+  
+  data0 = na_median(df, var, sinfo)
+  
+  data0[[var]] <- as.numeric(data0[[var]])
+  
+  data = data0 %>%
+    mutate("玡丁" = lag(ltime, default = ltime[1]),
+           "玡" = lag(data0[[var]], default = data0[[var]][1]),
+           "玡畉" = abs(玡 - data0[[var]]))
+  
+  k1 = 1/sqrt(p1)
+  ODV_1LU = data  %>%
+    dplyr::summarise(玡畉キА_all=mean(玡畉),玡畉夹非畉_all=sd(玡畉)) %>%
+    mutate(ODV_1L = 玡畉キА_all-k1*玡畉夹非畉_all,
+           ODV_1U = 玡畉キА_all+k1*玡畉夹非畉_all)
+  
+  k2 = 1/sqrt(p2)
+  ODV_LU = data %>%
+    filter(between(玡畉,ODV_1LU$ODV_1L,ODV_1LU$ODV_1U)) %>%
+    dplyr::summarise(玡畉キА_trun=mean(玡畉),玡畉夹非畉_trun=sd(玡畉)) %>%
+    mutate(ODV_L = 玡畉キА_trun-k2*玡畉夹非畉_trun,
+           ODV_U = 玡畉キА_trun+k2*玡畉夹非畉_trun)
+  
+  return(ODV_LU)
+}
+
+#=============================================
+# 玡铬笆(Chebyshev)ぇ闽ㄧ计 by Tina
+#==============================================
+chebyshev_range <- function(df, sinfo){
+  
+  p1 = 0.2
+  p2 = 0.5
+  
+  if (!is.na(sinfo$CHE_P1)) {p1 = sinfo$CHE_P1}
+  if (!is.na(sinfo$CHE_P2)) {p2 = sinfo$CHE_P2}
+  
+  k1 = 1/sqrt(p1)
+  k2 = 1/sqrt(p2)
+  
+  ODV_1LU = df %>% 
+    dplyr::summarise(Mean_all = mean(.data[[sinfo$VALUE_COL]]),
+                     SD_all = sd(.data[[sinfo$VALUE_COL]])) %>%
+    mutate(ODV_1L = Mean_all-k1*SD_all,
+           ODV_1U = Mean_all+k1*SD_all)
+  
+  
+  
+  ODV_LU = df %>% 
+    filter(between(.data[[sinfo$VALUE_COL]], ODV_1LU$ODV_1L, ODV_1LU$ODV_1U)) %>%
+    dplyr::summarise(Mean_trun = mean(.data[[sinfo$VALUE_COL]]),
+                     SD_trun = sd(.data[[sinfo$VALUE_COL]])) %>%
+    mutate(ODV_L = Mean_trun-k2*SD_trun,
+           ODV_U = Mean_trun+k2*SD_trun)
+  
+  return(ODV_LU)
+}
+
+#=============================================
+# 玡铬笆(Chebyshev)ぇ闽ㄧ计 by Tina
+#==============================================
+na_median <- function(data, var, sinfo){
+  
+  #print("na_median da")
+  #print(var)
+  #print(year(data[[sinfo$TIME_COL]]))
+  #惠盢factor锣Θcharacter﹃Αㄏノyear()month()单单
+  #data[[as.character(sinfo$TIME_COL)]]
+  #year(data[[as.character(sinfo$TIME_COL)]])
+  
+  da = data %>%
+    select(.data[[var]]) %>%
+    #mutate("ltime" = .data[[sinfo$TIME_COL]]) %>%
+    #dplyr::rename(sinfo$TIME_COL="ltime") #%>%
+    mutate("ltime" = data[[as.character(sinfo$TIME_COL)]],
+           "禜跑计" = var,
+           "year" = year(data[[as.character(sinfo$TIME_COL)]]),
+           "month" = month(data[[as.character(sinfo$TIME_COL)]]),
+           "琌框簗" = ifelse(is.na(data[[var]]),1,0))
+  #print(da)
+  
+  m = da %>%
+    group_by(year = year(ltime), month = month(ltime)) %>%
+    dplyr::summarise("框簗羆㎝" = sum(琌框簗))
+  
+  #print("after na_median da")
+  #–るい计俱る璝NA玥ぃ穦陪瞷
+  Median =  da %>%
+    group_by(year = year(ltime), month = month(ltime)) %>%
+    dplyr::summarise("median" = format(round(median(.data[[var]], na.rm = TRUE), 3),
+                                       nsmall = 3))
+  
+  
+  
+  m1 = left_join(m,Median, by = c("year","month")) %>%
+    select(year, month, median)
+  
+  
+  
+  #るnaㄏノるだ程掸戈干癬ㄓ硂妓–る常Τ
+  #るだ程掸戈ノslice() n():程掸
+  last = Median %>%
+    filter(median!="NA") %>%
+    group_by(month) %>%
+    slice(n()) %>%
+    select(month,median) %>%
+    reshape::rename(c(median = "median.month"))
+  
+  
+  #盢NA干い计
+  lm1 = left_join(m1,last,by=c("month"))%>%
+    mutate(median = ifelse(is.na(median), median.month, median)) %>%
+    select(year, month, median)
+  
+  
+  #﹍戈na干い计
+  h = data[[var]]
+  
+  DATA = left_join(da, lm1, by = c("year","month")) %>%
+    mutate( var = ifelse(is.na(h), median, h),
+            "い计干" = ifelse(is.na(h), 1, 0),
+            "玡掸干い计" = lag(い计干, default = い计干[1])) %>%
+    select(禜跑计, ltime, var, い计干, 玡掸干い计) %>%
+    reshape::rename(c(var=var))
+  
+  return(DATA)
+}
