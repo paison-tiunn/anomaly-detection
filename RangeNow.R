@@ -346,18 +346,6 @@ setDBConnect <- function(ip,db,user,pwd){
 }
 
 
-#組合查詢字串
-getSensorSQL <- function(tbName,time_Col,value_col,sensorID,sid_Col,sdate,edate){
-  sqlStr <- paste("SELECT ",sid_Col,",",value_col,",",time_Col," FROM ", sep="")
-  #sqlStr <- "SELECT * FROM "
-  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," between '",sdate,"' and '", edate,"'", sep="" )
-  
-  sqlStr
-}
-
-
-
-
 mainDir_txt = get_mainDir(type = "txt")
 mainDir_Rout = get_mainDir(type = "Rout")
 writeLog("Start RangeNow Process", mainDir_txt)
@@ -393,27 +381,20 @@ realtimeQuery = paste0(realtimeQuery, "from V_Sensor_Info where [AUTO_UPDATE] = 
 querySensor <- dbSendQuery(basicConn, realtimeQuery)
 
 
-# select * from V_Sensor_Info where update_time > getdate()-update_FQ
-
-
-
 
 
 
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
 
-#print(nrow(SensorInfoList))
-#print(length(SensorInfoList))
-
 
 for (idx in 1:nrow(SensorInfoList)) {
-  #print(SensorInfoList[2])
 
   SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
                                 SensorInfoList$DB_NAME[idx],
                                 SensorInfoList$USERNAME[idx],
                                 SensorInfoList$PASSWORD[idx])
+  
   queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
                            SensorInfoList$TIME_COL[idx],
                            SensorInfoList$VALUE_COL[idx],
@@ -421,20 +402,11 @@ for (idx in 1:nrow(SensorInfoList)) {
                            SensorInfoList$SENSOR_ID_COL[idx],
                            SensorInfoList$SDATE[idx],
                            SensorInfoList$EDATE[idx])
-  #print(queryStr)
-  #print(SensorInfoList$SENSOR_ID[idx])
-  #print(SensorInfoList$SENSOR_ID_COL[idx])
   
   query <- dbSendQuery(SensorConnect, queryStr)
   
   data <- dbFetch(query)
-  #print(nrow(data))
-  
   dbClearResult(query)
-  #calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
-  #aa = SensorInfoList[idx,]
-  #print("aa is ")
-  #print(aa$TABLE_NAME)
   
   if(dim(data)[1]==0){message(paste0("No data: [TABLE_NAME] = ", SensorInfoList$TABLE_NAME[idx], ", ",
                                   "[VALUE_COL] = ", SensorInfoList$VALUE_COL[idx], ", ",

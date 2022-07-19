@@ -370,14 +370,16 @@ setDBConnect <- function(ip,db,user,pwd){
 }
 
 
-#組合查詢字串
-getSensorSQL <- function(tbName,time_Col,value_col,sid_Col,sensorID,period){
-  sqlStr <- paste("SELECT ",sid_Col,",",value_col,",",time_Col," FROM ", sep="")
-  #sqlStr <- "SELECT * FROM "
-  sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," > getdate()-", period, sep="" )
-  
-  sqlStr
-}
+# #=======================
+# # 組合查詢字串(舊的)
+# #==============================
+# getSensorSQL <- function(tbName, time_Col, value_col, sid_Col, sensorID, period){
+#   sqlStr <- paste0("SELECT ",sid_Col,",",value_col,",",time_Col," FROM ")
+#   #sqlStr <- "SELECT * FROM "
+#   sqlStr <- paste(sqlStr, tbName , " where ",sid_Col," = '",sensorID,"' and  ",time_Col," > getdate()-", period, sep="" )
+#   
+#   sqlStr
+# }
 
 
 
@@ -409,27 +411,45 @@ querySensor <- dbSendQuery(basicConn, dailycheckQuery)
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
 
-
-
-for (idx in 1:nrow(SensorInfoList)) {
-  #print(SensorInfoList[2])
+if(nrow(SensorInfoList) > 0){
   
-  SensorConnect <- setDBConnect(SensorInfoList$IP[idx],SensorInfoList$DB_NAME[idx],SensorInfoList$USERNAME[idx],SensorInfoList$PASSWORD[idx])
-  queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx] ,SensorInfoList$TIME_COL[idx],SensorInfoList$VALUE_COL[idx],SensorInfoList$SENSOR_ID_COL[idx],SensorInfoList$SENSOR_ID[idx],SensorInfoList$DATA_RANGE[idx])
-  #print(queryStr)
-  query <- dbSendQuery(SensorConnect, queryStr)
-  data <- dbFetch(query)
-  #print(nrow(data))
-  dbClearResult(query)
-  #calResult(data,SensorInfoList$COLUMN_NAME[idx],SensorInfoList$SN[idx])
-  #aa = SensorInfoList[idx,]
-  #print("aa is ")
-  #print(aa$TABLE_NAME)
-  calResult(data,SensorInfoList[idx,])
-  #print(queryStr)
-  writeLog(queryStr)
-  
+  for (idx in 1:nrow(SensorInfoList)) {
+    
+    SensorConnect <- setDBConnect(SensorInfoList$IP[idx],
+                                  SensorInfoList$DB_NAME[idx],
+                                  SensorInfoList$USERNAME[idx],
+                                  SensorInfoList$PASSWORD[idx])
+    # queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
+    #                          SensorInfoList$TIME_COL[idx],
+    #                          SensorInfoList$VALUE_COL[idx],
+    #                          SensorInfoList$SENSOR_ID_COL[idx],
+    #                          SensorInfoList$SENSOR_ID[idx],
+    #                          SensorInfoList$DATA_RANGE[idx])
+    
+    queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
+                             SensorInfoList$TIME_COL[idx],
+                             SensorInfoList$VALUE_COL[idx],
+                             SensorInfoList$SENSOR_ID[idx],
+                             SensorInfoList$SENSOR_ID_COL[idx],
+                             as.Date(SensorInfoList$SDATE[idx]) + SensorInfoList$UPDATE_FQ[idx],
+                             as.Date(SensorInfoList$EDATE[idx]) + SensorInfoList$UPDATE_FQ[idx])
+    
+    query <- dbSendQuery(SensorConnect, queryStr)
+    data <- dbFetch(query)
+    
+    dbClearResult(query)
+    
+    calResult(data, SensorInfoList[idx,], AutoTriggered = TRUE)
+    
+    #writeLog(queryStr, mainDir_txt)
+    
+  }
+}else{
+  writeLog("No data need to be updated for now.", mainDir_txt)
+  message("No data need to be updated for now.")
 }
+
+
 
 writeLog("Finish Range Process", mainDir_txt)
 sink(type = "message")
@@ -438,33 +458,5 @@ close(errorCatch)
 dbDisconnect(basicConn)
 dbDisconnect(SensorConnect)
 
-
-
-##--------------------------------------------------------------------------------------------------
-#SensorConnect <- dbConnect(odbc(),
-#                         Driver = "{SQL Server Native Client 11.0}",
-#                         Server = "192.168.51.72",
-#                         Database = "BochObservation",
-#                         UID = "ricky",
-#                         PWD = "ricky",
-#                         Port = 1433)
-#
-##server=192.168.51.72;database=BochObservation;uid=ricky;pwd=ricky
-#
-##dbReadTable(con, "Person")
-#
-#query <- dbSendQuery(SensorConnect, "SELECT * FROM tblWeatherLink_5min where username='boch007' and localtime > getdate()-180")
-#data <- dbFetch(query)
-##dbClearResult(query)
-##print(data)
-
-
-
-
-
-#  #sigma3outlier_range(query,"UV")
-#print(sigma3Result$lower_bound)
-#print(IQRResult)
-#print(chebyshevResult)
 
 
