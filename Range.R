@@ -26,21 +26,6 @@
 #===================================================
 source("C:/Project/ReusedFunctions.R")
 
-#=================================
-# Load the required packages
-#================================================
-
-RequiredPackages = c("lubridate","magrittr","scales","reshape","purrr","dplyr","ggplot2","odbc","data.table","kableExtra")
-
-for(i in RequiredPackages){
-  if(!require(i, warn.conflicts = FALSE)){
-    install.packages(i, repos = "https://cran.rstudio.com")
-    library(i, warn.conflicts = FALSE)
-  }
-}
-
-
-
 
 
 
@@ -58,6 +43,26 @@ writeLog("Start RangeNow Process", mainDir_txt)
 
 errorCatch <- file(mainDir_Rout, open = "wt")
 sink(errorCatch, type = "message")
+
+
+#=================================
+# Load the required packages
+#================================================
+
+RequiredPackages = c("lubridate","magrittr","scales","reshape","purrr","dplyr","ggplot2","odbc","data.table","kableExtra")
+
+for(i in RequiredPackages){
+  if(!require(i, warn.conflicts = FALSE, character.only = TRUE)){
+    install.packages(i, repos = "https://cran.rstudio.com")
+    library(i, warn.conflicts = FALSE, character.only = TRUE)
+  }
+}
+
+
+
+
+
+
 
 #======================================
 # 資料庫連線
