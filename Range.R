@@ -1,10 +1,25 @@
 
 
-#================================================
-# 統整合理範圍上下界
-# 程式碼最後更新時間:   2022/07/19, 2020/12/22
-# 版本:V2_Paison, V1_Keny
-#==========================================================
+
+
+
+#=====================================================================================
+# Range.R       會在排程檢查確認需要自動更新時被觸發
+# RangeNow.R    會在使用者點選 [儲存並立即更新] 時被觸發
+# RangeNowALL.R 不會被自動觸發, 為內部想要更新特定站別時搭配 RangeNowALL_SQL.txt 使用 
+#=======================================================================================
+
+
+
+#============================================================
+# Current developer and maintainer: Paison (2021/11-2022/7)
+# Former developers: Keny & Tina (-2021/11)
+#=======================================================
+
+
+
+
+
 
 #=======================================================
 # Source the common function we will use below
@@ -14,75 +29,15 @@ source("C:/Project/ReusedFunctions.R")
 #=================================
 # Load the required packages
 #================================================
-if (!require('plyr', warn.conflicts = FALSE)) 
-{
-  install.packages('plyr',repos='https://cran.rstudio.com');
-  library(plyr, warn.conflicts = FALSE);
+
+RequiredPackages = c("lubridate","magrittr","scales","reshape","purrr","dplyr","ggplot2","odbc","data.table","kableExtra")
+
+for(i in RequiredPackages){
+  if(!require(i, warn.conflicts = FALSE)){
+    install.packages(i, repos = "https://cran.rstudio.com")
+    library(i, warn.conflicts = FALSE)
+  }
 }
-if (!require('tidyverse', warn.conflicts = FALSE)) 
-{
-  install.packages('tidyverse',repos='https://cran.rstudio.com');
-  library(tidyverse, warn.conflicts = FALSE);
-}
-
-if (!require('lubridate', warn.conflicts = FALSE)) 
-{
-  install.packages('lubridate',repos='https://cran.rstudio.com');
-  library(lubridate, warn.conflicts = FALSE);
-}
-if (!require('magrittr', warn.conflicts = FALSE)) 
-{
-  install.packages('magrittr',repos='https://cran.rstudio.com');
-  library(magrittr, warn.conflicts = FALSE);
-}
-if (!require('scales', warn.conflicts = FALSE)) 
-{
-  install.packages('scales',repos='https://cran.rstudio.com');
-  library(scales, warn.conflicts = FALSE);
-}
-
-if (!require('reshape', warn.conflicts = FALSE)) 
-{
-  install.packages('reshape',repos='https://cran.rstudio.com');
-  library(reshape, warn.conflicts = FALSE);
-}
-
-
-Packages_D <- c("tidyverse","lubridate","magrittr","scales","dplyr")
-sapply(Packages_D, library, character.only = TRUE)
-
-if (!require('dplyr', warn.conflicts = FALSE)) 
-{
-  install.packages('dplyr',repos='https://cran.rstudio.com');
-  library(dplyr, warn.conflicts = FALSE);
-}
-
-
-
-if (!require('data.table', warn.conflicts = FALSE)) 
-{
-  install.packages('data.table',repos='https://cran.rstudio.com');
-  library(data.table, warn.conflicts = FALSE);#fread會用到的package
-}
-
-if (!require('ggplot2', warn.conflicts = FALSE)) 
-{
-  install.packages('ggplot2',repos='https://cran.rstudio.com');
-  library(ggplot2, warn.conflicts = FALSE);
-}
-
-if (!require('kableExtra', warn.conflicts = FALSE)) 
-{
-  install.packages('kableExtra',repos='https://cran.rstudio.com');
-  library(kableExtra, warn.conflicts = FALSE)
-}
-
-if (!require('odbc', warn.conflicts = FALSE)) 
-{
-  install.packages('odbc',repos='https://cran.rstudio.com');
-  library(odbc, warn.conflicts = FALSE);
-}
-
 
 
 
@@ -119,6 +74,7 @@ basicConn <- dbConnect(odbc(),
 # 取得需要做計算的儀器
 #====================================================
 dailycheckQuery = "select * from V_Sensor_Info where [AUTO_UPDATE] = 1 and [UPDATE_FQ] <> 0 and ([TIMESTAMP] + [UPDATE_FQ]) < GETDATE()"
+
 querySensor <- dbSendQuery(basicConn, dailycheckQuery)
 SensorInfoList <- dbFetch(querySensor)
 dbClearResult(querySensor)
@@ -131,12 +87,6 @@ if(nrow(SensorInfoList) > 0){
                                   SensorInfoList$DB_NAME[idx],
                                   SensorInfoList$USERNAME[idx],
                                   SensorInfoList$PASSWORD[idx])
-    # queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
-    #                          SensorInfoList$TIME_COL[idx],
-    #                          SensorInfoList$VALUE_COL[idx],
-    #                          SensorInfoList$SENSOR_ID_COL[idx],
-    #                          SensorInfoList$SENSOR_ID[idx],
-    #                          SensorInfoList$DATA_RANGE[idx])
     
     queryStr <- getSensorSQL(SensorInfoList$TABLE_NAME[idx],
                              SensorInfoList$TIME_COL[idx],
@@ -152,8 +102,6 @@ if(nrow(SensorInfoList) > 0){
     dbClearResult(query)
     
     calResult(data, SensorInfoList[idx,], AutoTriggered = TRUE)
-    
-    #writeLog(queryStr, mainDir_txt)
     
   }
 }else{
